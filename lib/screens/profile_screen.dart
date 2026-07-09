@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../models/student.dart';
+import '../services/profile_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/soft_card.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({
     super.key,
     required this.student,
@@ -19,79 +20,120 @@ class ProfileScreen extends StatelessWidget {
   final ValueChanged<bool> onDarkModeChanged;
 
   @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final _profileService = const ProfileService();
+  late Future<Student> _profileFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _profileFuture = _profileService.fetchProfile(fallback: widget.student);
+  }
+
+  void _reload() {
+    setState(() {
+      _profileFuture = _profileService.fetchProfile(fallback: widget.student);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Profil')),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
-          children: [
-            CircleAvatar(
-              radius: 48,
-              backgroundColor: AppColors.mintOf(context),
-              child: Text(
-                student.name.isEmpty ? '?' : student.name.characters.first,
-                style: const TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 34,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              student.name,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              student.number,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.mutedOf(context),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              student.department,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.mutedOf(context),
-              ),
-            ),
-            const SizedBox(height: 32),
-            SoftCard(
-              padding: EdgeInsets.zero,
-              child: Column(
+      body: FutureBuilder<Student>(
+        future: _profileFuture,
+        builder: (context, snapshot) {
+          final student = snapshot.data ?? widget.student;
+
+          return SafeArea(
+            child: RefreshIndicator(
+              onRefresh: () async => _reload(),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
                 children: [
-                  _ProfileRow(
-                    icon: Icons.person_outline_rounded,
-                    title: 'Bilgilerim',
-                    onTap: () => _showStudentInfo(context),
+                  if (snapshot.connectionState == ConnectionState.waiting)
+                    const LinearProgressIndicator(minHeight: 2),
+                  if (snapshot.hasError) ...[
+                    _ProfileError(
+                      message: snapshot.error.toString(),
+                      onRetry: _reload,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  CircleAvatar(
+                    radius: 48,
+                    backgroundColor: AppColors.mintOf(context),
+                    child: Text(
+                      student.name.isEmpty
+                          ? '?'
+                          : student.name.characters.first,
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 34,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
-                  _ThemeSwitchRow(
-                    enabled: darkMode,
-                    onChanged: onDarkModeChanged,
+                  const SizedBox(height: 16),
+                  Text(
+                    student.name,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
-                  const _SwitchRow(),
-                  _ProfileRow(
-                    icon: Icons.logout_rounded,
-                    title: 'Cikis Yap',
-                    danger: true,
-                    onTap: onLogout,
-                    showLine: false,
+                  const SizedBox(height: 4),
+                  Text(
+                    student.number,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.mutedOf(context),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    student.department,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.mutedOf(context),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  SoftCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        _ProfileRow(
+                          icon: Icons.person_outline_rounded,
+                          title: 'Bilgilerim',
+                          onTap: () => _showStudentInfo(context, student),
+                        ),
+                        _ThemeSwitchRow(
+                          enabled: widget.darkMode,
+                          onChanged: widget.onDarkModeChanged,
+                        ),
+                        const _SwitchRow(),
+                        _ProfileRow(
+                          icon: Icons.logout_rounded,
+                          title: 'Cikis Yap',
+                          danger: true,
+                          onTap: widget.onLogout,
+                          showLine: false,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-  void _showStudentInfo(BuildContext context) {
+  void _showStudentInfo(BuildContext context, Student student) {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -120,6 +162,29 @@ class ProfileScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _ProfileError extends StatelessWidget {
+  const _ProfileError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return SoftCard(
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline_rounded, color: AppColors.danger),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(message, style: Theme.of(context).textTheme.bodyMedium),
+          ),
+          TextButton(onPressed: onRetry, child: const Text('Tekrar Dene')),
+        ],
+      ),
     );
   }
 }

@@ -1,54 +1,75 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
-import '../config/app_config.dart';
 import '../models/attendance_result.dart';
 import '../models/attendance_session.dart';
 import '../models/student.dart';
+import 'api_config.dart';
+import 'auth_token_store.dart';
 
 class AttendanceApi {
-  const AttendanceApi();
+  const AttendanceApi({
+    AuthTokenStore tokenStore = const SecureAuthTokenStore(),
+  }) : this._(tokenStore);
+
+  const AttendanceApi._(this._tokenStore);
+
+  final AuthTokenStore _tokenStore;
 
   Future<AttendanceResult> submit({
     required Student student,
     required AttendanceSession session,
+    required String qr,
   }) async {
-    if (AppConfig.apiBaseUrl.trim().isEmpty) {
-      await Future<void>.delayed(const Duration(milliseconds: 650));
-      return AttendanceResult.demo(session.sessionCode, lesson: session.lesson);
+    final token = await _tokenStore.readToken();
+    if (token == null || token.isEmpty) {
+      throw const AttendanceException(
+        'Oturum bulunamadı. Lütfen tekrar giriş yapın.',
+      );
     }
 
-    final base = Uri.parse(AppConfig.apiBaseUrl.trim());
+    final base = Uri.parse(ApiConfig.baseUrl.trim());
     final endpoint = base.replace(
-      path: _joinPath(base.path, '/api/attendance/check-in'),
+      path: _joinPath(base.path, '/attendance/scan'),
     );
 
     final response = await http
         .post(
           endpoint,
-          headers: const {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'studentName': student.name,
-            'studentNumber': student.number,
-            'department': student.department,
-            'sessionCode': session.sessionCode,
-            'lesson': session.lesson,
-            'scannedAt': DateTime.now().toIso8601String(),
-          }),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({'qr': qr, 'lat': null, 'lng': null}),
         )
-        .timeout(const Duration(seconds: 12));
+        .timeout(const Duration(seconds: 12))
+        .onError<SocketException>((error, stackTrace) {
+          throw const AttendanceException('Sunucuya ulaşılamıyor');
+        })
+        .onError<TimeoutException>((error, stackTrace) {
+          throw const AttendanceException('Sunucuya ulaşılamıyor');
+        })
+        .onError<http.ClientException>((error, stackTrace) {
+          throw const AttendanceException('Sunucuya ulaşılamıyor');
+        });
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
+    final body = _decodeBody(response.body);
+
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300 &&
+        body['success'] != false) {
       return AttendanceResult.success(
-        session.sessionCode,
-        lesson: session.lesson,
+        lesson: _successLesson(body, session.lesson),
+        message: _stringValue(body['message']),
       );
     }
 
-    throw const AttendanceException(
-      'Yoklama gonderilemedi. Lutfen tekrar deneyin.',
+    throw AttendanceException(
+      _stringValue(body['message']) ??
+          'Yoklama gönderilemedi. Lütfen tekrar deneyin.',
     );
   }
 
@@ -57,6 +78,31 @@ class AttendanceApi {
         ? basePath.substring(0, basePath.length - 1)
         : basePath;
     return '$normalizedBase$apiPath';
+  }
+
+  Map<String, dynamic> _decodeBody(String source) {
+    if (source.trim().isEmpty) return const {};
+    try {
+      final decoded = jsonDecode(source);
+      return decoded is Map<String, dynamic> ? decoded : const {};
+    } on FormatException {
+      return const {};
+    }
+  }
+
+  String? _successLesson(Map<String, dynamic> body, String? fallback) {
+    final data = body['data'];
+    if (data is Map<String, dynamic>) {
+      return _stringValue(data['lesson']) ??
+          _stringValue(data['courseName']) ??
+          _stringValue(data['course']) ??
+          fallback;
+    }
+    return fallback;
+  }
+
+  String? _stringValue(Object? value) {
+    return value is String ? value : null;
   }
 }
 

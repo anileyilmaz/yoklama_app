@@ -1,21 +1,35 @@
 import 'package:flutter/material.dart';
 
+import '../models/attendance_record.dart';
 import '../models/student.dart';
+import '../services/attendance_history_service.dart';
 import '../theme/app_theme.dart';
 import 'qr_scan_screen.dart';
 
-class StudentDashboardScreen extends StatelessWidget {
+class StudentDashboardScreen extends StatefulWidget {
   const StudentDashboardScreen({super.key, required this.student});
 
   final Student student;
 
   @override
+  State<StudentDashboardScreen> createState() => _StudentDashboardScreenState();
+}
+
+class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
+  final _historyService = const AttendanceHistoryService();
+  late Future<List<AttendanceRecord>> _historyFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _historyFuture = _historyService.fetchHistory();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final nameParts = student.name.trim().split(RegExp(r'\s+'));
+    final nameParts = widget.student.name.trim().split(RegExp(r'\s+'));
     final firstName = nameParts.isEmpty ? '' : nameParts.first;
-    final greetingName = firstName.isEmpty || firstName == 'Demo'
-        ? 'Ayberk'
-        : firstName;
+    final greetingName = firstName.isEmpty ? 'Öğrenci' : firstName;
     final avatarLetter = greetingName.characters.first.toUpperCase();
 
     return Scaffold(
@@ -45,19 +59,20 @@ class StudentDashboardScreen extends StatelessWidget {
                     const SizedBox(height: 28),
                     const _TodayLessonCard(),
                     const SizedBox(height: 16),
-                    const _AttendanceStatusCard(),
+                    _AttendanceStatusCard(historyFuture: _historyFuture),
                     const SizedBox(height: 22),
                     _QrAttendanceButton(
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => QrScanScreen(student: student),
+                            builder: (_) =>
+                                QrScanScreen(student: widget.student),
                           ),
                         );
                       },
                     ),
                     const SizedBox(height: 22),
-                    const _LastAttendanceCard(),
+                    _LastAttendanceCard(historyFuture: _historyFuture),
                   ],
                 );
               },
@@ -92,7 +107,7 @@ class _DashboardHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Merhaba, $name 👋', style: titleStyle),
+              Text('Merhaba, $name', style: titleStyle),
               const SizedBox(height: 12),
               Text(
                 'Bugünkü yoklama durumunu buradan takip edebilirsin.',
@@ -164,23 +179,13 @@ class _TodayLessonCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 22),
                 Text(
-                  'Mobil Programlama',
+                  'Bugünkü ders bilgisi bulunmuyor.',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontSize: 26,
-                    height: 1.08,
-                    color: AppColors.textOf(context),
-                    fontWeight: FontWeight.w900,
+                    fontSize: 21,
+                    height: 1.18,
+                    color: AppColors.mutedOf(context),
+                    fontWeight: FontWeight.w800,
                   ),
-                ),
-                const SizedBox(height: 18),
-                const _InfoLine(
-                  icon: Icons.schedule_rounded,
-                  text: '13:00 - 14:30',
-                ),
-                const SizedBox(height: 10),
-                const _InfoLine(
-                  icon: Icons.location_on_outlined,
-                  text: 'Lab 2',
                 ),
               ],
             ),
@@ -194,7 +199,9 @@ class _TodayLessonCard extends StatelessWidget {
 }
 
 class _AttendanceStatusCard extends StatelessWidget {
-  const _AttendanceStatusCard();
+  const _AttendanceStatusCard({required this.historyFuture});
+
+  final Future<List<AttendanceRecord>> historyFuture;
 
   @override
   Widget build(BuildContext context) {
@@ -211,19 +218,55 @@ class _AttendanceStatusCard extends StatelessWidget {
                   title: 'Yoklama Durumu',
                 ),
                 const SizedBox(height: 18),
-                Text(
-                  'Henüz yoklama verilmedi',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.mutedOf(context),
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
+                FutureBuilder<List<AttendanceRecord>>(
+                  future: historyFuture,
+                  builder: (context, snapshot) {
+                    final latest = _latestRecord(snapshot.data);
+                    final text = latest == null
+                        ? 'Henüz yoklama kaydı bulunmuyor'
+                        : latest.joined
+                        ? 'Son yoklama başarılı'
+                        : 'Son yoklama katılımı yok';
+
+                    return Text(
+                      snapshot.connectionState == ConnectionState.waiting
+                          ? 'Yoklama durumu yükleniyor'
+                          : text,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppColors.mutedOf(context),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
           ),
           const SizedBox(width: 12),
-          const _StatusPill(label: 'Beklemede', foreground: AppColors.amber),
+          FutureBuilder<List<AttendanceRecord>>(
+            future: historyFuture,
+            builder: (context, snapshot) {
+              final latest = _latestRecord(snapshot.data);
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const _StatusPill(
+                  label: 'Yükleniyor',
+                  foreground: AppColors.amber,
+                );
+              }
+              if (latest?.joined == true) {
+                return const _StatusPill(
+                  label: 'Katıldı',
+                  foreground: AppColors.primary,
+                  icon: Icons.check_rounded,
+                );
+              }
+              return const _StatusPill(
+                label: 'Beklemede',
+                foreground: AppColors.amber,
+              );
+            },
+          ),
         ],
       ),
     );
@@ -286,51 +329,98 @@ class _QrAttendanceButton extends StatelessWidget {
 }
 
 class _LastAttendanceCard extends StatelessWidget {
-  const _LastAttendanceCard();
+  const _LastAttendanceCard({required this.historyFuture});
+
+  final Future<List<AttendanceRecord>> historyFuture;
 
   @override
   Widget build(BuildContext context) {
-    return _DashboardCard(
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const _CardTitle(
-                  icon: Icons.access_time_rounded,
-                  title: 'Son Yoklama',
+    return FutureBuilder<List<AttendanceRecord>>(
+      future: historyFuture,
+      builder: (context, snapshot) {
+        final latest = _latestRecord(snapshot.data);
+
+        return _DashboardCard(
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _CardTitle(
+                      icon: Icons.access_time_rounded,
+                      title: 'Son Yoklama',
+                    ),
+                    const SizedBox(height: 22),
+                    if (snapshot.connectionState == ConnectionState.waiting)
+                      Text(
+                        'Yükleniyor...',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: AppColors.mutedOf(context),
+                              fontWeight: FontWeight.w700,
+                            ),
+                      )
+                    else if (latest == null)
+                      Text(
+                        'Henüz yoklama kaydı bulunmuyor.',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: AppColors.mutedOf(context),
+                              fontWeight: FontWeight.w700,
+                            ),
+                      )
+                    else ...[
+                      Text(
+                        latest.lesson,
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              fontSize: 24,
+                              height: 1.1,
+                              color: AppColors.textOf(context),
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
+                      const SizedBox(height: 16),
+                      _StatusPill(
+                        label: latest.joined ? 'Katıldı' : 'Katılmadı',
+                        foreground: latest.joined
+                            ? AppColors.primary
+                            : AppColors.danger,
+                        icon: latest.joined
+                            ? Icons.check_rounded
+                            : Icons.close_rounded,
+                      ),
+                      const SizedBox(height: 16),
+                      _InfoLine(
+                        icon: Icons.calendar_today_rounded,
+                        text: _recordDateText(latest),
+                      ),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 22),
-                Text(
-                  'Veritabanı',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontSize: 24,
-                    height: 1.1,
-                    color: AppColors.textOf(context),
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const _StatusPill(
-                  label: 'Katıldı',
-                  foreground: AppColors.primary,
-                  icon: Icons.check_rounded,
-                ),
-                const SizedBox(height: 16),
-                const _InfoLine(
-                  icon: Icons.calendar_today_rounded,
-                  text: '20 Mayıs 2024 • 10:15',
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 14),
+              const _SoftIconBadge(icon: Icons.check_circle_outline_rounded),
+            ],
           ),
-          const SizedBox(width: 14),
-          const _SoftIconBadge(icon: Icons.check_circle_outline_rounded),
-        ],
-      ),
+        );
+      },
     );
   }
+}
+
+AttendanceRecord? _latestRecord(List<AttendanceRecord>? records) {
+  if (records == null || records.isEmpty) return null;
+  return records.first;
+}
+
+String _recordDateText(AttendanceRecord record) {
+  final parts = [
+    if (record.date.trim().isNotEmpty) record.date.trim(),
+    if (record.time.trim().isNotEmpty) record.time.trim(),
+  ];
+  return parts.isEmpty ? 'Tarih bilgisi yok' : parts.join(' • ');
 }
 
 class _DashboardCard extends StatelessWidget {

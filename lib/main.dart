@@ -120,12 +120,11 @@ class _StudentGateState extends State<StudentGate> {
 
   Future<void> _saveStudent(AuthSession session, bool rememberMe) async {
     final prefs = await SharedPreferences.getInstance();
+    await widget.tokenStore.saveToken(session.token);
     if (rememberMe) {
       await prefs.setString(_studentKey, jsonEncode(session.student.toJson()));
-      await widget.tokenStore.saveToken(session.token);
     } else {
       await prefs.remove(_studentKey);
-      await widget.tokenStore.clearToken();
     }
     setState(() => _student = session.student);
   }

@@ -188,6 +188,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
       final result = await _api.submit(
         student: widget.student,
         session: session,
+        qr: value,
       );
       if (!mounted) return;
       await Navigator.of(

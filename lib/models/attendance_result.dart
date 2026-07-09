@@ -5,7 +5,6 @@ class AttendanceResult {
     required this.lesson,
     required this.date,
     required this.time,
-    required this.isDemo,
   });
 
   final String title;
@@ -13,29 +12,17 @@ class AttendanceResult {
   final String lesson;
   final String date;
   final String time;
-  final bool isDemo;
 
-  factory AttendanceResult.success(String code, {String? lesson}) {
+  factory AttendanceResult.success({String? lesson, String? message}) {
     final now = DateTime.now();
     return AttendanceResult(
-      title: 'Yoklama Gonderildi!',
-      message: 'Yoklamaniz basariyla kaydedildi.',
-      lesson: lesson?.isNotEmpty == true ? lesson! : 'Veri Yapilari',
+      title: 'Yoklama Gönderildi!',
+      message: message?.isNotEmpty == true
+          ? message!
+          : 'Yoklamanız başarıyla kaydedildi.',
+      lesson: lesson?.isNotEmpty == true ? lesson! : 'Ders bilgisi yok',
       date: _date(now),
       time: _time(now),
-      isDemo: false,
-    );
-  }
-
-  factory AttendanceResult.demo(String code, {String? lesson}) {
-    final now = DateTime.now();
-    return AttendanceResult(
-      title: 'Yoklama Gonderildi!',
-      message: 'Yoklamaniz basariyla kaydedildi.',
-      lesson: lesson?.isNotEmpty == true ? lesson! : 'Veri Yapilari',
-      date: _date(now),
-      time: _time(now),
-      isDemo: true,
     );
   }
 
