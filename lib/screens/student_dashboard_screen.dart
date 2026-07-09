@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../models/attendance_record.dart';
 import '../models/student.dart';
 import '../theme/app_theme.dart';
-import '../widgets/gradient_button.dart';
-import '../widgets/soft_card.dart';
 import 'qr_scan_screen.dart';
 
 class StudentDashboardScreen extends StatelessWidget {
@@ -12,89 +9,185 @@ class StudentDashboardScreen extends StatelessWidget {
 
   final Student student;
 
-  static const _recentRecords = [
-    AttendanceRecord(
-      lesson: 'Veri Yapilari',
-      date: '07.07.2025',
-      time: '13:30',
-      joined: true,
-    ),
-    AttendanceRecord(
-      lesson: 'Web Programlama',
-      date: '04.07.2025',
-      time: '10:15',
-      joined: true,
-    ),
-    AttendanceRecord(
-      lesson: 'Veritabani',
-      date: '01.07.2025',
-      time: '09:00',
-      joined: false,
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final nameParts = student.name.trim().split(RegExp(r'\s+'));
-    final firstName = nameParts.isEmpty ? student.name : nameParts.first;
+    final firstName = nameParts.isEmpty ? '' : nameParts.first;
+    final greetingName = firstName.isEmpty || firstName == 'Demo'
+        ? 'Ayberk'
+        : firstName;
+    final avatarLetter = greetingName.characters.first.toUpperCase();
 
     return Scaffold(
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
-          children: [
-            Text(
-              'Merhaba, ${firstName.isNotEmpty ? firstName : student.name}',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '${student.department} - ${student.number}',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppColors.mutedOf(context),
-              ),
-            ),
-            const SizedBox(height: 24),
-            const _AttendanceStatusCard(),
-            const SizedBox(height: 28),
-            SizedBox(
-              height: 62,
-              child: GradientButton(
-                label: 'QR ile Yoklama Ver',
-                icon: Icons.qr_code_scanner_rounded,
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => QrScanScreen(student: student),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 28),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Son Yoklamalar',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                Text(
-                  '${_recentRecords.where((record) => record.joined).length}/${_recentRecords.length} katilim',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w800,
+      backgroundColor: AppColors.surfaceOf(context),
+      body: Stack(
+        children: [
+          const Positioned.fill(child: _DashboardBackground()),
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final horizontalPadding = constraints.maxWidth < 380
+                    ? 18.0
+                    : 24.0;
+
+                return ListView(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    28,
+                    horizontalPadding,
+                    24,
                   ),
+                  children: [
+                    _DashboardHeader(
+                      name: greetingName,
+                      avatarLetter: avatarLetter,
+                    ),
+                    const SizedBox(height: 28),
+                    const _TodayLessonCard(),
+                    const SizedBox(height: 16),
+                    const _AttendanceStatusCard(),
+                    const SizedBox(height: 22),
+                    _QrAttendanceButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => QrScanScreen(student: student),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 22),
+                    const _LastAttendanceCard(),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardHeader extends StatelessWidget {
+  const _DashboardHeader({required this.name, required this.avatarLetter});
+
+  final String name;
+  final String avatarLetter;
+
+  @override
+  Widget build(BuildContext context) {
+    final titleStyle = Theme.of(context).textTheme.headlineMedium?.copyWith(
+      color: AppColors.isDark(context)
+          ? AppColors.darkText
+          : const Color(0xff07351f),
+      fontWeight: FontWeight.w900,
+      height: 1.12,
+    );
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Merhaba, $name 👋', style: titleStyle),
+              const SizedBox(height: 12),
+              Text(
+                'Bugünkü yoklama durumunu buradan takip edebilirsin.',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: AppColors.mutedOf(context),
+                  height: 1.55,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 16),
+        _StudentAvatar(letter: avatarLetter),
+      ],
+    );
+  }
+}
+
+class _StudentAvatar extends StatelessWidget {
+  const _StudentAvatar({required this.letter});
+
+  final String letter;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 64,
+      height: 64,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.mintOf(context).withValues(alpha: 0.72),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Text(
+        letter,
+        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+          color: AppColors.primary,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
+class _TodayLessonCard extends StatelessWidget {
+  const _TodayLessonCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return _DashboardCard(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _CardTitle(
+                  icon: Icons.calendar_month_rounded,
+                  title: 'Bugünkü Ders',
+                ),
+                const SizedBox(height: 22),
+                Text(
+                  'Mobil Programlama',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontSize: 26,
+                    height: 1.08,
+                    color: AppColors.textOf(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const _InfoLine(
+                  icon: Icons.schedule_rounded,
+                  text: '13:00 - 14:30',
+                ),
+                const SizedBox(height: 10),
+                const _InfoLine(
+                  icon: Icons.location_on_outlined,
+                  text: 'Lab 2',
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            for (final record in _recentRecords) ...[
-              _RecentAttendanceTile(record: record),
-              const SizedBox(height: 10),
-            ],
-          ],
-        ),
+          ),
+          const SizedBox(width: 14),
+          const _SoftIconBadge(icon: Icons.menu_book_rounded, size: 86),
+        ],
       ),
     );
   }
@@ -105,55 +198,268 @@ class _AttendanceStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SoftCard(
-      padding: const EdgeInsets.all(18),
+    return _DashboardCard(
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: AppColors.mintOf(context),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.event_note_rounded,
-              color: AppColors.primary,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Yoklama Durumu',
-                  style: Theme.of(context).textTheme.titleMedium,
+                const _CardTitle(
+                  icon: Icons.verified_user_outlined,
+                  title: 'Yoklama Durumu',
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 18),
                 Text(
-                  'Bugun aktif bir ders yoklamasi bekleniyor.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  'Henüz yoklama verilmedi',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: AppColors.mutedOf(context),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            decoration: BoxDecoration(
-              color: AppColors.amberSoftOf(context),
-              borderRadius: BorderRadius.circular(8),
+          const SizedBox(width: 12),
+          const _StatusPill(label: 'Beklemede', foreground: AppColors.amber),
+        ],
+      ),
+    );
+  }
+}
+
+class _QrAttendanceButton extends StatelessWidget {
+  const _QrAttendanceButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [Color(0xff07924f), Color(0xff2fc36f)],
+        ),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.28),
+            blurRadius: 22,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: onPressed,
+          child: const SizedBox(
+            height: 68,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.qr_code_2_rounded, color: Colors.white, size: 32),
+                SizedBox(width: 14),
+                Flexible(
+                  child: Text(
+                    'QR ile Yoklama Ver',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            child: const Text(
-              'Hazir',
-              style: TextStyle(
-                color: AppColors.amber,
-                fontWeight: FontWeight.w800,
-                fontSize: 12,
-              ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LastAttendanceCard extends StatelessWidget {
+  const _LastAttendanceCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return _DashboardCard(
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _CardTitle(
+                  icon: Icons.access_time_rounded,
+                  title: 'Son Yoklama',
+                ),
+                const SizedBox(height: 22),
+                Text(
+                  'Veritabanı',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontSize: 24,
+                    height: 1.1,
+                    color: AppColors.textOf(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const _StatusPill(
+                  label: 'Katıldı',
+                  foreground: AppColors.primary,
+                  icon: Icons.check_rounded,
+                ),
+                const SizedBox(height: 16),
+                const _InfoLine(
+                  icon: Icons.calendar_today_rounded,
+                  text: '20 Mayıs 2024 • 10:15',
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          const _SoftIconBadge(icon: Icons.check_circle_outline_rounded),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardCard extends StatelessWidget {
+  const _DashboardCard({
+    required this.child,
+    this.padding = const EdgeInsets.all(18),
+  });
+
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppColors.isDark(context);
+
+    return Container(
+      width: double.infinity,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: AppColors.cardOf(
+          context,
+        ).withValues(alpha: isDark ? 0.95 : 0.98),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.white.withValues(alpha: 0.72),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.24 : 0.07),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _CardTitle extends StatelessWidget {
+  const _CardTitle({required this.icon, required this.title});
+
+  final IconData icon;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: AppColors.primary, size: 26),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
+            title,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: AppColors.primary,
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _InfoLine extends StatelessWidget {
+  const _InfoLine({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: AppColors.mutedOf(context), size: 24),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: AppColors.mutedOf(context),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.label, required this.foreground, this.icon});
+
+  final String label;
+  final Color foreground;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final isPositive = foreground == AppColors.primary;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(icon == null ? 14 : 10, 8, 14, 8),
+      decoration: BoxDecoration(
+        color: isPositive
+            ? AppColors.mintOf(context).withValues(alpha: 0.76)
+            : AppColors.amberSoftOf(context),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, color: foreground, size: 18),
+            const SizedBox(width: 6),
+          ],
+          Text(
+            label,
+            style: TextStyle(
+              color: foreground,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
             ),
           ),
         ],
@@ -162,71 +468,176 @@ class _AttendanceStatusCard extends StatelessWidget {
   }
 }
 
-class _RecentAttendanceTile extends StatelessWidget {
-  const _RecentAttendanceTile({required this.record});
+class _SoftIconBadge extends StatelessWidget {
+  const _SoftIconBadge({required this.icon, this.size = 76});
 
-  final AttendanceRecord record;
+  final IconData icon;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = record.joined ? AppColors.primary : AppColors.danger;
-    final statusBg = record.joined
-        ? AppColors.mintOf(context)
-        : AppColors.dangerSoftOf(context);
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: AppColors.mintOf(context).withValues(alpha: 0.68),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, color: AppColors.primary, size: size * 0.42),
+    );
+  }
+}
 
-    return SoftCard(
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: statusBg,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              record.joined
-                  ? Icons.check_circle_outline_rounded
-                  : Icons.cancel_outlined,
-              color: statusColor,
-              size: 21,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  record.lesson,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleMedium?.copyWith(fontSize: 14),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${record.date} - ${record.time}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.mutedOf(context),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            record.joined ? 'Katildin' : 'Kacirdi',
-            style: TextStyle(
-              color: statusColor,
-              fontWeight: FontWeight.w800,
-              fontSize: 12,
-            ),
-          ),
-        ],
+class _DashboardBackground extends StatelessWidget {
+  const _DashboardBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: AppColors.surfaceOf(context),
+      child: CustomPaint(
+        painter: _DashboardBackgroundPainter(isDark: AppColors.isDark(context)),
       ),
     );
+  }
+}
+
+class _DashboardBackgroundPainter extends CustomPainter {
+  const _DashboardBackgroundPainter({required this.isDark});
+
+  final bool isDark;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final primary = isDark ? AppColors.accent : AppColors.primary;
+    final linePaint = Paint()
+      ..color = primary.withValues(alpha: isDark ? 0.08 : 0.1)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+    final softFill = Paint()
+      ..color = primary.withValues(alpha: isDark ? 0.07 : 0.08)
+      ..style = PaintingStyle.fill;
+
+    final halo = Paint()
+      ..shader =
+          RadialGradient(
+            colors: [
+              primary.withValues(alpha: isDark ? 0.14 : 0.09),
+              primary.withValues(alpha: 0),
+            ],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width * 0.48, size.height * 0.16),
+              radius: size.width * 0.48,
+            ),
+          );
+    canvas.drawCircle(
+      Offset(size.width * 0.48, size.height * 0.16),
+      size.width * 0.48,
+      halo,
+    );
+
+    final hill = Path()
+      ..moveTo(0, size.height * 0.18)
+      ..quadraticBezierTo(
+        size.width * 0.42,
+        size.height * 0.1,
+        size.width,
+        size.height * 0.22,
+      )
+      ..lineTo(size.width, size.height * 0.32)
+      ..quadraticBezierTo(
+        size.width * 0.46,
+        size.height * 0.24,
+        0,
+        size.height * 0.28,
+      )
+      ..close();
+    canvas.drawPath(hill, softFill);
+
+    _drawSchool(canvas, size, linePaint);
+    _drawTrees(canvas, size, softFill);
+    _drawDots(canvas, Offset(size.width * 0.83, size.height * 0.08), primary);
+  }
+
+  void _drawSchool(Canvas canvas, Size size, Paint paint) {
+    final left = size.width * 0.08;
+    final top = size.height * 0.09;
+    final width = size.width * 0.24;
+    final height = size.height * 0.12;
+
+    final roof = Path()
+      ..moveTo(left, top + height * 0.34)
+      ..lineTo(left + width * 0.5, top)
+      ..lineTo(left + width, top + height * 0.34);
+    canvas.drawPath(roof, paint);
+    canvas.drawRect(
+      Rect.fromLTWH(
+        left + width * 0.12,
+        top + height * 0.34,
+        width * 0.76,
+        height * 0.5,
+      ),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(left + width * 0.5, top),
+      Offset(left + width * 0.5, top - height * 0.22),
+      paint,
+    );
+    canvas.drawPath(
+      Path()
+        ..moveTo(left + width * 0.5, top - height * 0.22)
+        ..lineTo(left + width * 0.65, top - height * 0.18)
+        ..lineTo(left + width * 0.5, top - height * 0.14),
+      paint,
+    );
+
+    for (var i = 0; i < 3; i++) {
+      final x = left + width * (0.25 + i * 0.2);
+      canvas.drawLine(
+        Offset(x, top + height * 0.4),
+        Offset(x, top + height * 0.82),
+        paint,
+      );
+    }
+  }
+
+  void _drawTrees(Canvas canvas, Size size, Paint paint) {
+    final baseY = size.height * 0.26;
+    final xs = [size.width * 0.84, size.width * 0.92];
+
+    for (final x in xs) {
+      final tree = Path()
+        ..moveTo(x, baseY - 64)
+        ..lineTo(x - 22, baseY - 18)
+        ..lineTo(x - 9, baseY - 18)
+        ..lineTo(x - 27, baseY + 22)
+        ..lineTo(x + 27, baseY + 22)
+        ..lineTo(x + 9, baseY - 18)
+        ..lineTo(x + 22, baseY - 18)
+        ..close();
+      canvas.drawPath(tree, paint);
+    }
+  }
+
+  void _drawDots(Canvas canvas, Offset origin, Color color) {
+    final dotPaint = Paint()
+      ..color = color.withValues(alpha: isDark ? 0.22 : 0.3);
+
+    for (var row = 0; row < 4; row++) {
+      for (var column = 0; column < 4; column++) {
+        canvas.drawCircle(
+          origin + Offset(column * 17, row * 17),
+          2.1,
+          dotPaint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashboardBackgroundPainter oldDelegate) {
+    return oldDelegate.isDark != isDark;
   }
 }

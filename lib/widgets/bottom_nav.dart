@@ -29,7 +29,7 @@ class AppBottomNav extends StatelessWidget {
         NavigationDestination(
           icon: Icon(Icons.history_rounded),
           selectedIcon: Icon(Icons.history_rounded),
-          label: 'Gecmis',
+          label: 'Geçmiş',
         ),
         NavigationDestination(
           icon: Icon(Icons.person_outline_rounded),
