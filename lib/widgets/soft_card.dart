@@ -20,15 +20,15 @@ class SoftCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: color ?? AppColors.cardOf(context),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.card),
         border: Border.all(color: AppColors.lineOf(context)),
         boxShadow: [
           BoxShadow(
             color: AppColors.textOf(
               context,
-            ).withValues(alpha: AppColors.isDark(context) ? 0.14 : 0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
+            ).withValues(alpha: AppColors.isDark(context) ? 0.14 : 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),

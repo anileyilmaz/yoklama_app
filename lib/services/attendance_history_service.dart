@@ -51,7 +51,9 @@ class AttendanceHistoryService {
         response.statusCode >= 300 ||
         body['success'] == false) {
       throw AttendanceHistoryException(
-        body['message'] as String? ?? 'Yoklama geçmişi alınamadı.',
+        body['message'] as String? ??
+            body['error'] as String? ??
+            'Yoklama geçmişi alınamadı.',
       );
     }
 
@@ -67,6 +69,7 @@ class AttendanceHistoryService {
 
   AttendanceRecord _recordFromJson(Map<String, dynamic> data) {
     return AttendanceRecord(
+      courseId: (data['courseId'] as num?)?.toInt(),
       lesson:
           _stringValue(data['lesson']) ??
           _stringValue(data['courseName']) ??

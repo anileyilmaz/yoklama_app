@@ -5,8 +5,6 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import '../models/attendance_result.dart';
-import '../models/attendance_session.dart';
-import '../models/student.dart';
 import 'api_config.dart';
 import 'auth_token_store.dart';
 
@@ -19,11 +17,7 @@ class AttendanceApi {
 
   final AuthTokenStore _tokenStore;
 
-  Future<AttendanceResult> submit({
-    required Student student,
-    required AttendanceSession session,
-    required String qr,
-  }) async {
+  Future<AttendanceResult> submit({required String qr}) async {
     final token = await _tokenStore.readToken();
     if (token == null || token.isEmpty) {
       throw const AttendanceException(
@@ -62,13 +56,14 @@ class AttendanceApi {
         response.statusCode < 300 &&
         body['success'] != false) {
       return AttendanceResult.success(
-        lesson: _successLesson(body, session.lesson),
+        lesson: _lessonFromResponse(body),
         message: _stringValue(body['message']),
       );
     }
 
     throw AttendanceException(
       _stringValue(body['message']) ??
+          _stringValue(body['error']) ??
           'Yoklama gönderilemedi. Lütfen tekrar deneyin.',
     );
   }
@@ -90,15 +85,22 @@ class AttendanceApi {
     }
   }
 
-  String? _successLesson(Map<String, dynamic> body, String? fallback) {
+  String? _lessonFromResponse(Map<String, dynamic> body) {
     final data = body['data'];
     if (data is Map<String, dynamic>) {
-      return _stringValue(data['lesson']) ??
+      final direct =
+          _stringValue(data['lesson']) ??
           _stringValue(data['courseName']) ??
-          _stringValue(data['course']) ??
-          fallback;
+          _stringValue(data['course']);
+      if (direct != null) return direct;
     }
-    return fallback;
+    // Sunucu şu an ders adını ayrı bir alanda değil, "Yoklamaya katıldınız: <ders>"
+    // formatındaki mesaj metninin içinde döner (bkz. server.js MOBILE_ENDPOINTS.ATTEND).
+    final message = _stringValue(body['message']);
+    if (message != null && message.contains(':')) {
+      return message.substring(message.indexOf(':') + 1).trim();
+    }
+    return null;
   }
 
   String? _stringValue(Object? value) {

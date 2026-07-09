@@ -18,7 +18,7 @@ class AppBottomNav extends StatelessWidget {
       selectedIndex: currentIndex,
       onDestinationSelected: onChanged,
       backgroundColor: AppColors.cardOf(context),
-      indicatorColor: AppColors.mintOf(context),
+      indicatorColor: AppColors.primarySoftOf(context),
       height: 70,
       destinations: const [
         NavigationDestination(
@@ -30,6 +30,11 @@ class AppBottomNav extends StatelessWidget {
           icon: Icon(Icons.history_rounded),
           selectedIcon: Icon(Icons.history_rounded),
           label: 'Geçmiş',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.menu_book_outlined),
+          selectedIcon: Icon(Icons.menu_book_rounded),
+          label: 'Derslerim',
         ),
         NavigationDestination(
           icon: Icon(Icons.person_outline_rounded),

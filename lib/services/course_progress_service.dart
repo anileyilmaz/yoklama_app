@@ -4,67 +4,70 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
-import '../models/student.dart';
+import '../models/course_progress.dart';
 import 'api_config.dart';
 import 'auth_token_store.dart';
 
-class ProfileService {
-  const ProfileService({
+class CourseProgressService {
+  const CourseProgressService({
     AuthTokenStore tokenStore = const SecureAuthTokenStore(),
     http.Client? client,
   }) : this._(tokenStore, client);
 
-  const ProfileService._(this._tokenStore, this._client);
+  const CourseProgressService._(this._tokenStore, this._client);
 
   final AuthTokenStore _tokenStore;
   final http.Client? _client;
 
-  Future<Student> fetchProfile({required Student fallback}) async {
+  Future<List<CourseProgress>> fetchCourses() async {
     final token = await _tokenStore.readToken();
     if (token == null || token.isEmpty) {
-      throw const ProfileException(
+      throw const CourseProgressException(
         'Oturum bulunamadı. Lütfen tekrar giriş yapın.',
       );
     }
 
     final client = _client ?? http.Client();
     final response = await client
-        .get(_endpoint('/profile'), headers: {'Authorization': 'Bearer $token'})
+        .get(_endpoint('/courses'), headers: {'Authorization': 'Bearer $token'})
         .timeout(const Duration(seconds: 12))
         .onError<SocketException>((error, stackTrace) {
-          throw const ProfileException('Sunucuya ulaşılamıyor');
+          throw const CourseProgressException('Sunucuya ulaşılamıyor');
         })
         .onError<TimeoutException>((error, stackTrace) {
-          throw const ProfileException('Sunucuya ulaşılamıyor');
+          throw const CourseProgressException('Sunucuya ulaşılamıyor');
         })
         .onError<http.ClientException>((error, stackTrace) {
-          throw const ProfileException('Sunucuya ulaşılamıyor');
+          throw const CourseProgressException('Sunucuya ulaşılamıyor');
         });
 
-    final body = _decodeBody(response.body);
+    final decoded = _decode(response.body);
+    final body = decoded is Map<String, dynamic> ? decoded : const {};
 
     if (response.statusCode < 200 ||
         response.statusCode >= 300 ||
         body['success'] == false) {
-      throw ProfileException(
+      throw CourseProgressException(
         body['message'] as String? ??
             body['error'] as String? ??
-            'Profil bilgileri alınamadı.',
+            'Ders listesi alınamadı.',
       );
     }
 
-    final data = _asMap(body['data']) ?? _asMap(body['student']) ?? body;
+    final source = body['data'] ?? decoded;
+    final list = source is List ? source : const [];
 
-    return Student(
-      name:
-          _stringValue(data['name']) ??
-          _stringValue(data['studentName']) ??
-          fallback.name,
-      number:
-          _stringValue(data['number']) ??
-          _stringValue(data['studentNumber']) ??
-          fallback.number,
-      department: _stringValue(data['department']) ?? fallback.department,
+    return list.whereType<Map<String, dynamic>>().map(_courseFromJson).toList();
+  }
+
+  CourseProgress _courseFromJson(Map<String, dynamic> data) {
+    return CourseProgress(
+      courseId: (data['courseId'] as num?)?.toInt() ?? 0,
+      course: data['course'] as String? ?? 'Ders bilgisi yok',
+      attended: (data['attended'] as num?)?.toInt() ?? 0,
+      totalSessions: (data['totalSessions'] as num?)?.toInt() ?? 0,
+      percent: (data['percent'] as num?)?.toInt(),
+      atRisk: data['atRisk'] == true,
     );
   }
 
@@ -81,27 +84,18 @@ class ProfileService {
     return '$normalizedBase$normalizedPath';
   }
 
-  Map<String, dynamic> _decodeBody(String source) {
+  Object? _decode(String source) {
     if (source.trim().isEmpty) return const {};
     try {
-      final decoded = jsonDecode(source);
-      return decoded is Map<String, dynamic> ? decoded : const {};
+      return jsonDecode(source);
     } on FormatException {
       return const {};
     }
   }
-
-  Map<String, dynamic>? _asMap(Object? value) {
-    return value is Map<String, dynamic> ? value : null;
-  }
-
-  String? _stringValue(Object? value) {
-    return value is String ? value : null;
-  }
 }
 
-class ProfileException implements Exception {
-  const ProfileException(this.message);
+class CourseProgressException implements Exception {
+  const CourseProgressException(this.message);
 
   final String message;
 

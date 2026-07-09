@@ -1,84 +1,186 @@
 import 'package:flutter/material.dart';
 
+import '../models/active_session.dart';
 import '../models/attendance_record.dart';
 import '../models/student.dart';
-import '../services/attendance_history_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/primary_button.dart';
 import 'qr_scan_screen.dart';
 
-class StudentDashboardScreen extends StatefulWidget {
-  const StudentDashboardScreen({super.key, required this.student});
+class StudentDashboardScreen extends StatelessWidget {
+  const StudentDashboardScreen({
+    super.key,
+    required this.student,
+    required this.historyFuture,
+    required this.onAttendanceUpdated,
+    this.activeSessions = const [],
+  });
 
   final Student student;
+  final Future<List<AttendanceRecord>> historyFuture;
+  final List<ActiveSession> activeSessions;
 
-  @override
-  State<StudentDashboardScreen> createState() => _StudentDashboardScreenState();
-}
+  /// QR akışından dönüldüğünde (`HomeShell`'in paylaşılan geçmişini) yeniden
+  /// çekmesi için çağrılır — Dashboard ve Geçmiş sekmesi aynı veriyi görsün diye.
+  final VoidCallback onAttendanceUpdated;
 
-class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
-  final _historyService = const AttendanceHistoryService();
-  late Future<List<AttendanceRecord>> _historyFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _historyFuture = _historyService.fetchHistory();
+  Future<void> _openScanner(BuildContext context) async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const QrScanScreen()));
+    if (!context.mounted) return;
+    onAttendanceUpdated();
   }
 
   @override
   Widget build(BuildContext context) {
-    final nameParts = widget.student.name.trim().split(RegExp(r'\s+'));
+    final nameParts = student.name.trim().split(RegExp(r'\s+'));
     final firstName = nameParts.isEmpty ? '' : nameParts.first;
     final greetingName = firstName.isEmpty ? 'Öğrenci' : firstName;
     final avatarLetter = greetingName.characters.first.toUpperCase();
 
     return Scaffold(
       backgroundColor: AppColors.surfaceOf(context),
-      body: Stack(
-        children: [
-          const Positioned.fill(child: _DashboardBackground()),
-          SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final horizontalPadding = constraints.maxWidth < 380
-                    ? 18.0
-                    : 24.0;
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final horizontalPadding = constraints.maxWidth < 380 ? 18.0 : 24.0;
 
-                return ListView(
-                  padding: EdgeInsets.fromLTRB(
-                    horizontalPadding,
-                    28,
-                    horizontalPadding,
-                    24,
-                  ),
-                  children: [
-                    _DashboardHeader(
-                      name: greetingName,
-                      avatarLetter: avatarLetter,
-                    ),
-                    const SizedBox(height: 28),
-                    const _TodayLessonCard(),
-                    const SizedBox(height: 16),
-                    _AttendanceStatusCard(historyFuture: _historyFuture),
-                    const SizedBox(height: 22),
-                    _QrAttendanceButton(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                QrScanScreen(student: widget.student),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 22),
-                    _LastAttendanceCard(historyFuture: _historyFuture),
-                  ],
-                );
-              },
+            return ListView(
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                28,
+                horizontalPadding,
+                24,
+              ),
+              children: [
+                _DashboardHeader(name: greetingName, avatarLetter: avatarLetter),
+                const SizedBox(height: 24),
+                // ListView'in children listesi HER zaman sabit sayida ve sabit
+                // sirada eleman icermeli. Aktif oturum sayisina gore bu listeye
+                // kosullu eleman eklenip cikarilirsa, ValueKey kullanan diger
+                // kardeslerin index'i kaydigi icin Flutter'in sliver child
+                // reconciliation'i coker (RenderSliverList assertion). Bu yuzden
+                // banner alani HER zaman tek bir sabit widget olarak burada
+                // durur, icerde bossa SizedBox.shrink() doner.
+                _LiveSessionBannerArea(
+                  sessions: activeSessions,
+                  onTap: () => _openScanner(context),
+                ),
+                _AttendanceStatusCard(
+                  key: ValueKey('attendanceStatus-${identityHashCode(historyFuture)}'),
+                  historyFuture: historyFuture,
+                ),
+                const SizedBox(height: 20),
+                PrimaryButton(
+                  label: 'QR ile Yoklama Ver',
+                  icon: Icons.qr_code_2_rounded,
+                  height: 58,
+                  fontSize: 16,
+                  onPressed: () => _openScanner(context),
+                ),
+                const SizedBox(height: 20),
+                _LastAttendanceCard(
+                  key: ValueKey('lastAttendance-${identityHashCode(historyFuture)}'),
+                  historyFuture: historyFuture,
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _LiveSessionBannerArea extends StatelessWidget {
+  const _LiveSessionBannerArea({required this.sessions, required this.onTap});
+
+  final List<ActiveSession> sessions;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (sessions.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        children: [
+          for (final session in sessions) ...[
+            _LiveSessionBanner(
+              key: ValueKey(session.sessionId),
+              session: session,
+              onTap: onTap,
             ),
-          ),
+            const SizedBox(height: 10),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _LiveSessionBanner extends StatelessWidget {
+  const _LiveSessionBanner({
+    super.key,
+    required this.session,
+    required this.onTap,
+  });
+
+  final ActiveSession session;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.card),
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.brandOf(context),
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.wifi_tethering_rounded,
+              color: AppColors.onBrandOf(context),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${session.courseName} için yoklama açık',
+                    style: TextStyle(
+                      color: AppColors.onBrandOf(context),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Şimdi katıl',
+                    style: TextStyle(
+                      color: AppColors.onBrandOf(
+                        context,
+                      ).withValues(alpha: 0.82),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.onBrandOf(context),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -93,11 +195,7 @@ class _DashboardHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final titleStyle = Theme.of(context).textTheme.headlineMedium?.copyWith(
-      color: AppColors.isDark(context)
-          ? AppColors.darkText
-          : const Color(0xff07351f),
-      fontWeight: FontWeight.w900,
-      height: 1.12,
+      color: AppColors.textOf(context),
     );
 
     return Row(
@@ -108,13 +206,11 @@ class _DashboardHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Merhaba, $name', style: titleStyle),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Text(
                 'Bugünkü yoklama durumunu buradan takip edebilirsin.',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: AppColors.mutedOf(context),
-                  height: 1.55,
-                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
@@ -135,71 +231,25 @@ class _StudentAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 64,
-      height: 64,
+      width: 56,
+      height: 56,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: AppColors.mintOf(context).withValues(alpha: 0.72),
+        color: AppColors.primarySoftOf(context),
         shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
       ),
       child: Text(
         letter,
-        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-          color: AppColors.primary,
-          fontWeight: FontWeight.w900,
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+          color: AppColors.brandOf(context),
         ),
       ),
     );
   }
 }
 
-class _TodayLessonCard extends StatelessWidget {
-  const _TodayLessonCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return _DashboardCard(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const _CardTitle(
-                  icon: Icons.calendar_month_rounded,
-                  title: 'Bugünkü Ders',
-                ),
-                const SizedBox(height: 22),
-                Text(
-                  'Bugünkü ders bilgisi bulunmuyor.',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontSize: 21,
-                    height: 1.18,
-                    color: AppColors.mutedOf(context),
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 14),
-          const _SoftIconBadge(icon: Icons.menu_book_rounded, size: 86),
-        ],
-      ),
-    );
-  }
-}
-
 class _AttendanceStatusCard extends StatelessWidget {
-  const _AttendanceStatusCard({required this.historyFuture});
+  const _AttendanceStatusCard({super.key, required this.historyFuture});
 
   final Future<List<AttendanceRecord>> historyFuture;
 
@@ -217,7 +267,7 @@ class _AttendanceStatusCard extends StatelessWidget {
                   icon: Icons.verified_user_outlined,
                   title: 'Yoklama Durumu',
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
                 FutureBuilder<List<AttendanceRecord>>(
                   future: historyFuture,
                   builder: (context, snapshot) {
@@ -232,9 +282,8 @@ class _AttendanceStatusCard extends StatelessWidget {
                       snapshot.connectionState == ConnectionState.waiting
                           ? 'Yoklama durumu yükleniyor'
                           : text,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: AppColors.mutedOf(context),
-                        fontSize: 18,
                         fontWeight: FontWeight.w600,
                       ),
                     );
@@ -251,19 +300,19 @@ class _AttendanceStatusCard extends StatelessWidget {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const _StatusPill(
                   label: 'Yükleniyor',
-                  foreground: AppColors.amber,
+                  tone: _PillTone.pending,
                 );
               }
               if (latest?.joined == true) {
                 return const _StatusPill(
                   label: 'Katıldı',
-                  foreground: AppColors.primary,
+                  tone: _PillTone.positive,
                   icon: Icons.check_rounded,
                 );
               }
               return const _StatusPill(
                 label: 'Beklemede',
-                foreground: AppColors.amber,
+                tone: _PillTone.pending,
               );
             },
           ),
@@ -273,63 +322,8 @@ class _AttendanceStatusCard extends StatelessWidget {
   }
 }
 
-class _QrAttendanceButton extends StatelessWidget {
-  const _QrAttendanceButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [Color(0xff07924f), Color(0xff2fc36f)],
-        ),
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.28),
-            blurRadius: 22,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: onPressed,
-          child: const SizedBox(
-            height: 68,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.qr_code_2_rounded, color: Colors.white, size: 32),
-                SizedBox(width: 14),
-                Flexible(
-                  child: Text(
-                    'QR ile Yoklama Ver',
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 19,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _LastAttendanceCard extends StatelessWidget {
-  const _LastAttendanceCard({required this.historyFuture});
+  const _LastAttendanceCard({super.key, required this.historyFuture});
 
   final Future<List<AttendanceRecord>> historyFuture;
 
@@ -351,47 +345,35 @@ class _LastAttendanceCard extends StatelessWidget {
                       icon: Icons.access_time_rounded,
                       title: 'Son Yoklama',
                     ),
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 18),
                     if (snapshot.connectionState == ConnectionState.waiting)
                       Text(
                         'Yükleniyor...',
                         style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: AppColors.mutedOf(context),
-                              fontWeight: FontWeight.w700,
-                            ),
+                            ?.copyWith(color: AppColors.mutedOf(context)),
                       )
                     else if (latest == null)
                       Text(
                         'Henüz yoklama kaydı bulunmuyor.',
                         style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: AppColors.mutedOf(context),
-                              fontWeight: FontWeight.w700,
-                            ),
+                            ?.copyWith(color: AppColors.mutedOf(context)),
                       )
                     else ...[
                       Text(
                         latest.lesson,
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(
-                              fontSize: 24,
-                              height: 1.1,
-                              color: AppColors.textOf(context),
-                              fontWeight: FontWeight.w900,
-                            ),
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       _StatusPill(
                         label: latest.joined ? 'Katıldı' : 'Katılmadı',
-                        foreground: latest.joined
-                            ? AppColors.primary
-                            : AppColors.danger,
+                        tone: latest.joined
+                            ? _PillTone.positive
+                            : _PillTone.negative,
                         icon: latest.joined
                             ? Icons.check_rounded
                             : Icons.close_rounded,
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       _InfoLine(
                         icon: Icons.calendar_today_rounded,
                         text: _recordDateText(latest),
@@ -424,36 +406,26 @@ String _recordDateText(AttendanceRecord record) {
 }
 
 class _DashboardCard extends StatelessWidget {
-  const _DashboardCard({
-    required this.child,
-    this.padding = const EdgeInsets.all(18),
-  });
+  const _DashboardCard({required this.child});
 
   final Widget child;
-  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = AppColors.isDark(context);
-
     return Container(
       width: double.infinity,
-      padding: padding,
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.cardOf(
-          context,
-        ).withValues(alpha: isDark ? 0.95 : 0.98),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
-              : Colors.white.withValues(alpha: 0.72),
-        ),
+        color: AppColors.cardOf(context),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: AppColors.lineOf(context)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.24 : 0.07),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+            color: AppColors.textOf(
+              context,
+            ).withValues(alpha: AppColors.isDark(context) ? 0.14 : 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -470,20 +442,20 @@ class _CardTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = AppColors.brandOf(context);
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: AppColors.primary, size: 26),
-        const SizedBox(width: 12),
+        Icon(icon, color: brand, size: 22),
+        const SizedBox(width: 10),
         Flexible(
           child: Text(
             title,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: AppColors.primary,
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: brand),
           ),
         ),
       ],
@@ -501,8 +473,8 @@ class _InfoLine extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, color: AppColors.mutedOf(context), size: 24),
-        const SizedBox(width: 10),
+        Icon(icon, color: AppColors.mutedOf(context), size: 20),
+        const SizedBox(width: 8),
         Expanded(
           child: Text(
             text,
@@ -518,30 +490,42 @@ class _InfoLine extends StatelessWidget {
   }
 }
 
+enum _PillTone { positive, pending, negative }
+
 class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.label, required this.foreground, this.icon});
+  const _StatusPill({required this.label, required this.tone, this.icon});
 
   final String label;
-  final Color foreground;
+  final _PillTone tone;
   final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
-    final isPositive = foreground == AppColors.primary;
+    final Color foreground;
+    final Color background;
+    switch (tone) {
+      case _PillTone.positive:
+        foreground = AppColors.brandOf(context);
+        background = AppColors.primarySoftOf(context);
+      case _PillTone.pending:
+        foreground = AppColors.mutedOf(context);
+        background = AppColors.lineOf(context);
+      case _PillTone.negative:
+        foreground = AppColors.danger;
+        background = AppColors.dangerSoftOf(context);
+    }
 
     return Container(
       padding: EdgeInsets.fromLTRB(icon == null ? 14 : 10, 8, 14, 8),
       decoration: BoxDecoration(
-        color: isPositive
-            ? AppColors.mintOf(context).withValues(alpha: 0.76)
-            : AppColors.amberSoftOf(context),
-        borderRadius: BorderRadius.circular(8),
+        color: background,
+        borderRadius: BorderRadius.circular(AppRadius.control),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, color: foreground, size: 18),
+            Icon(icon, color: foreground, size: 16),
             const SizedBox(width: 6),
           ],
           Text(
@@ -549,7 +533,7 @@ class _StatusPill extends StatelessWidget {
             style: TextStyle(
               color: foreground,
               fontSize: 13,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -559,175 +543,21 @@ class _StatusPill extends StatelessWidget {
 }
 
 class _SoftIconBadge extends StatelessWidget {
-  const _SoftIconBadge({required this.icon, this.size = 76});
+  const _SoftIconBadge({required this.icon});
 
   final IconData icon;
-  final double size;
+  static const double _size = 64;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: size,
-      height: size,
+      width: _size,
+      height: _size,
       decoration: BoxDecoration(
-        color: AppColors.mintOf(context).withValues(alpha: 0.68),
+        color: AppColors.primarySoftOf(context),
         shape: BoxShape.circle,
       ),
-      child: Icon(icon, color: AppColors.primary, size: size * 0.42),
+      child: Icon(icon, color: AppColors.brandOf(context), size: _size * 0.42),
     );
-  }
-}
-
-class _DashboardBackground extends StatelessWidget {
-  const _DashboardBackground();
-
-  @override
-  Widget build(BuildContext context) {
-    return ColoredBox(
-      color: AppColors.surfaceOf(context),
-      child: CustomPaint(
-        painter: _DashboardBackgroundPainter(isDark: AppColors.isDark(context)),
-      ),
-    );
-  }
-}
-
-class _DashboardBackgroundPainter extends CustomPainter {
-  const _DashboardBackgroundPainter({required this.isDark});
-
-  final bool isDark;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final primary = isDark ? AppColors.accent : AppColors.primary;
-    final linePaint = Paint()
-      ..color = primary.withValues(alpha: isDark ? 0.08 : 0.1)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
-    final softFill = Paint()
-      ..color = primary.withValues(alpha: isDark ? 0.07 : 0.08)
-      ..style = PaintingStyle.fill;
-
-    final halo = Paint()
-      ..shader =
-          RadialGradient(
-            colors: [
-              primary.withValues(alpha: isDark ? 0.14 : 0.09),
-              primary.withValues(alpha: 0),
-            ],
-          ).createShader(
-            Rect.fromCircle(
-              center: Offset(size.width * 0.48, size.height * 0.16),
-              radius: size.width * 0.48,
-            ),
-          );
-    canvas.drawCircle(
-      Offset(size.width * 0.48, size.height * 0.16),
-      size.width * 0.48,
-      halo,
-    );
-
-    final hill = Path()
-      ..moveTo(0, size.height * 0.18)
-      ..quadraticBezierTo(
-        size.width * 0.42,
-        size.height * 0.1,
-        size.width,
-        size.height * 0.22,
-      )
-      ..lineTo(size.width, size.height * 0.32)
-      ..quadraticBezierTo(
-        size.width * 0.46,
-        size.height * 0.24,
-        0,
-        size.height * 0.28,
-      )
-      ..close();
-    canvas.drawPath(hill, softFill);
-
-    _drawSchool(canvas, size, linePaint);
-    _drawTrees(canvas, size, softFill);
-    _drawDots(canvas, Offset(size.width * 0.83, size.height * 0.08), primary);
-  }
-
-  void _drawSchool(Canvas canvas, Size size, Paint paint) {
-    final left = size.width * 0.08;
-    final top = size.height * 0.09;
-    final width = size.width * 0.24;
-    final height = size.height * 0.12;
-
-    final roof = Path()
-      ..moveTo(left, top + height * 0.34)
-      ..lineTo(left + width * 0.5, top)
-      ..lineTo(left + width, top + height * 0.34);
-    canvas.drawPath(roof, paint);
-    canvas.drawRect(
-      Rect.fromLTWH(
-        left + width * 0.12,
-        top + height * 0.34,
-        width * 0.76,
-        height * 0.5,
-      ),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(left + width * 0.5, top),
-      Offset(left + width * 0.5, top - height * 0.22),
-      paint,
-    );
-    canvas.drawPath(
-      Path()
-        ..moveTo(left + width * 0.5, top - height * 0.22)
-        ..lineTo(left + width * 0.65, top - height * 0.18)
-        ..lineTo(left + width * 0.5, top - height * 0.14),
-      paint,
-    );
-
-    for (var i = 0; i < 3; i++) {
-      final x = left + width * (0.25 + i * 0.2);
-      canvas.drawLine(
-        Offset(x, top + height * 0.4),
-        Offset(x, top + height * 0.82),
-        paint,
-      );
-    }
-  }
-
-  void _drawTrees(Canvas canvas, Size size, Paint paint) {
-    final baseY = size.height * 0.26;
-    final xs = [size.width * 0.84, size.width * 0.92];
-
-    for (final x in xs) {
-      final tree = Path()
-        ..moveTo(x, baseY - 64)
-        ..lineTo(x - 22, baseY - 18)
-        ..lineTo(x - 9, baseY - 18)
-        ..lineTo(x - 27, baseY + 22)
-        ..lineTo(x + 27, baseY + 22)
-        ..lineTo(x + 9, baseY - 18)
-        ..lineTo(x + 22, baseY - 18)
-        ..close();
-      canvas.drawPath(tree, paint);
-    }
-  }
-
-  void _drawDots(Canvas canvas, Offset origin, Color color) {
-    final dotPaint = Paint()
-      ..color = color.withValues(alpha: isDark ? 0.22 : 0.3);
-
-    for (var row = 0; row < 4; row++) {
-      for (var column = 0; column < 4; column++) {
-        canvas.drawCircle(
-          origin + Offset(column * 17, row * 17),
-          2.1,
-          dotPaint,
-        );
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashboardBackgroundPainter oldDelegate) {
-    return oldDelegate.isDark != isDark;
   }
 }

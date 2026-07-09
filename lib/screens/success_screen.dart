@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/attendance_result.dart';
 import '../theme/app_theme.dart';
-import '../widgets/gradient_button.dart';
+import '../widgets/primary_button.dart';
 import '../widgets/soft_card.dart';
 
 class SuccessScreen extends StatelessWidget {
@@ -19,30 +19,18 @@ class SuccessScreen extends StatelessWidget {
           child: Column(
             children: [
               const Spacer(),
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  SizedBox(
-                    width: 132,
-                    height: 132,
-                    child: CustomPaint(painter: _ConfettiPainter()),
-                  ),
-                  Container(
-                    width: 92,
-                    height: 92,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [AppColors.accent, AppColors.primary],
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.check_rounded,
-                      color: Colors.white,
-                      size: 56,
-                    ),
-                  ),
-                ],
+              Container(
+                width: 92,
+                height: 92,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary,
+                ),
+                child: const Icon(
+                  Icons.check_rounded,
+                  color: Colors.white,
+                  size: 56,
+                ),
               ),
               const SizedBox(height: 36),
               Text(
@@ -79,10 +67,12 @@ class SuccessScreen extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              GradientButton(
-                label: 'Ana Sayfaya Don',
+              PrimaryButton(
+                label: 'Ana Sayfaya Dön',
                 icon: Icons.home_outlined,
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => Navigator.of(
+                  context,
+                ).popUntil((route) => route.isFirst),
               ),
             ],
           ),
@@ -121,33 +111,4 @@ class _InfoRow extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ConfettiPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final colors = [AppColors.primary, AppColors.accent, AppColors.amber];
-    final offsets = [
-      const Offset(10, 24),
-      const Offset(36, 10),
-      const Offset(102, 22),
-      const Offset(118, 66),
-      const Offset(24, 98),
-      const Offset(92, 112),
-    ];
-
-    for (var i = 0; i < offsets.length; i++) {
-      final paint = Paint()..color = colors[i % colors.length];
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromCenter(center: offsets[i], width: 7, height: 7),
-          const Radius.circular(2),
-        ),
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

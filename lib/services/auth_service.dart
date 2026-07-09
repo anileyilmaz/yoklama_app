@@ -143,6 +143,7 @@ class AuthException implements Exception {
     return AuthException(
       message:
           body['message'] as String? ??
+          body['error'] as String? ??
           'Giriş yapılamadı. Lütfen tekrar deneyin.',
       code: body['code'] as String? ?? 'login_failed',
       retryAfterSeconds: body['retryAfterSeconds'] is num

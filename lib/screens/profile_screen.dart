@@ -4,6 +4,7 @@ import '../models/student.dart';
 import '../services/profile_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/soft_card.dart';
+import 'change_password_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({
@@ -65,13 +66,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                   CircleAvatar(
                     radius: 48,
-                    backgroundColor: AppColors.mintOf(context),
+                    backgroundColor: AppColors.primarySoftOf(context),
                     child: Text(
                       student.name.isEmpty
                           ? '?'
                           : student.name.characters.first,
-                      style: const TextStyle(
-                        color: AppColors.primary,
+                      style: TextStyle(
+                        color: AppColors.brandOf(context),
                         fontSize: 34,
                         fontWeight: FontWeight.w800,
                       ),
@@ -109,6 +110,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           title: 'Bilgilerim',
                           onTap: () => _showStudentInfo(context, student),
                         ),
+                        _ProfileRow(
+                          icon: Icons.lock_outline_rounded,
+                          title: 'Şifre Değiştir',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const ChangePasswordScreen(),
+                            ),
+                          ),
+                        ),
                         _ThemeSwitchRow(
                           enabled: widget.darkMode,
                           onChanged: widget.onDarkModeChanged,
@@ -116,7 +126,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const _SwitchRow(),
                         _ProfileRow(
                           icon: Icons.logout_rounded,
-                          title: 'Cikis Yap',
+                          title: 'Çıkış Yap',
                           danger: true,
                           onTap: widget.onLogout,
                           showLine: false,
@@ -151,9 +161,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 18),
                 _InfoLine(label: 'Ad Soyad', value: student.name),
-                _InfoLine(label: 'Ogrenci Numarasi', value: student.number),
+                _InfoLine(label: 'Öğrenci Numarası', value: student.number),
                 _InfoLine(
-                  label: 'Sinif / Bolum',
+                  label: 'Sınıf / Bölüm',
                   value: student.department,
                   showLine: false,
                 ),
@@ -314,7 +324,7 @@ class _ThemeSwitchRow extends StatelessWidget {
           ),
           Switch(
             value: enabled,
-            activeThumbColor: AppColors.primary,
+            activeThumbColor: AppColors.brandOf(context),
             onChanged: onChanged,
           ),
         ],
@@ -359,7 +369,7 @@ class _SwitchRowState extends State<_SwitchRow> {
           ),
           Switch(
             value: _enabled,
-            activeThumbColor: AppColors.primary,
+            activeThumbColor: AppColors.brandOf(context),
             onChanged: (value) => setState(() => _enabled = value),
           ),
         ],

@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/app_logo.dart';
-import '../widgets/gradient_button.dart';
-import '../widgets/qr_art.dart';
+import '../widgets/primary_button.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key, required this.onStart});
@@ -13,37 +12,49 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.surfaceOf(context),
       body: SafeArea(
         child: Column(
           children: [
-            const QrWelcomeArt(),
+            Container(
+              width: double.infinity,
+              color: AppColors.primary,
+              padding: const EdgeInsets.fromLTRB(28, 36, 28, 40),
+              child: Column(
+                children: [
+                  const AppLogo(size: 68, onSurface: true),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Yoklama',
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Akıllı Yoklama Sistemi',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.78),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(28, 16, 28, 28),
+                padding: const EdgeInsets.fromLTRB(28, 32, 28, 28),
                 child: Column(
                   children: [
-                    const AppLogo(size: 62),
-                    const SizedBox(height: 22),
                     Text(
-                      'Yoklama',
-                      style: Theme.of(context).textTheme.headlineLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Akilli Yoklama Sistemi',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      'Öğrenci bilgilerini gir, tahtadaki QR kodu okut ve yoklamanı tamamla.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: AppColors.mutedOf(context),
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Ogrenci bilgilerini gir, tahtadaki QR kodu okut ve yoklamani tamamla.',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
                     const Spacer(),
-                    GradientButton(label: 'Baslayalim', onPressed: onStart),
+                    PrimaryButton(label: 'Başlayalım', onPressed: onStart),
                   ],
                 ),
               ),

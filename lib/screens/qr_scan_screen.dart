@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-import '../models/attendance_session.dart';
-import '../models/student.dart';
 import '../services/attendance_api.dart';
 import '../theme/app_theme.dart';
 import 'success_screen.dart';
 
 class QrScanScreen extends StatefulWidget {
-  const QrScanScreen({super.key, required this.student});
-
-  final Student student;
+  const QrScanScreen({super.key});
 
   @override
   State<QrScanScreen> createState() => _QrScanScreenState();
@@ -184,12 +180,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
     if (_submitting) return;
     setState(() => _submitting = true);
     try {
-      final session = AttendanceSession.fromQr(value);
-      final result = await _api.submit(
-        student: widget.student,
-        session: session,
-        qr: value,
-      );
+      final result = await _api.submit(qr: value);
       if (!mounted) return;
       await Navigator.of(
         context,
@@ -258,7 +249,7 @@ class _ScannerFrame extends StatelessWidget {
           height: 86,
           decoration: BoxDecoration(
             color: Colors.black.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppRadius.control),
           ),
           child: Icon(
             Icons.qr_code_2_rounded,
@@ -281,7 +272,7 @@ class _SecurityInfoCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       decoration: BoxDecoration(
         color: const Color(0xff0b2224).withValues(alpha: 0.76),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.control),
         border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
       ),
       child: Row(
@@ -332,7 +323,7 @@ class _TorchButton extends StatelessWidget {
                   ? AppColors.accent
                   : Colors.white.withValues(alpha: 0.13),
               disabledBackgroundColor: Colors.white.withValues(alpha: 0.07),
-              foregroundColor: isOn ? const Color(0xff05211d) : Colors.white,
+              foregroundColor: isOn ? AppColors.primaryDark : Colors.white,
               disabledForegroundColor: Colors.white.withValues(alpha: 0.38),
               fixedSize: const Size(58, 58),
             ),
@@ -358,7 +349,7 @@ class _CancelButton extends StatelessWidget {
           foregroundColor: AppColors.accent,
           side: BorderSide(color: AppColors.accent.withValues(alpha: 0.82)),
           minimumSize: const Size.fromHeight(58),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.control)),
           textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
         ),
         child: const Text('İptal'),
@@ -400,10 +391,10 @@ class _CameraPermissionView extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         decoration: BoxDecoration(
-          color: const Color(0xff171b16).withValues(alpha: 0.86),
-          borderRadius: BorderRadius.circular(8),
+          color: const Color(0xff1c1712).withValues(alpha: 0.86),
+          borderRadius: BorderRadius.circular(AppRadius.control),
           border: Border.all(
-            color: AppColors.amber.withValues(alpha: 0.42),
+            color: AppColors.accent.withValues(alpha: 0.42),
             style: BorderStyle.solid,
           ),
         ),
@@ -415,7 +406,7 @@ class _CameraPermissionView extends StatelessWidget {
               children: [
                 const Icon(
                   Icons.warning_amber_rounded,
-                  color: AppColors.amber,
+                  color: AppColors.accent,
                   size: 34,
                 ),
                 const SizedBox(width: 14),
@@ -457,13 +448,13 @@ class _ScannerFramePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final framePaint = Paint()
-      ..color = const Color(0xff7cffd7)
+      ..color = const Color(0xffe0b563)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4.2
       ..strokeCap = StrokeCap.round;
 
     final glowPaint = Paint()
-      ..color = const Color(0xff2eeaa1).withValues(alpha: 0.28)
+      ..color = AppColors.accent.withValues(alpha: 0.28)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 10
       ..strokeCap = StrokeCap.round
@@ -472,11 +463,11 @@ class _ScannerFramePainter extends CustomPainter {
     final scanPaint = Paint()
       ..shader = const LinearGradient(
         colors: [
-          Color(0x002eea9f),
-          Color(0xff2eea9f),
+          Color(0x00b08a2e),
+          Color(0xffb08a2e),
           Color(0xffffffff),
-          Color(0xff2eea9f),
-          Color(0x002eea9f),
+          Color(0xffb08a2e),
+          Color(0x00b08a2e),
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, 4))
       ..strokeWidth = 3
