@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'models/auth_session.dart';
 import 'models/student.dart';
 import 'screens/student_info_screen.dart';
 import 'screens/home_shell.dart';
 import 'screens/welcome_screen.dart';
+import 'services/auth_token_store.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -14,7 +16,12 @@ void main() {
 }
 
 class AttendanceApp extends StatefulWidget {
-  const AttendanceApp({super.key});
+  const AttendanceApp({
+    super.key,
+    this.tokenStore = const SecureAuthTokenStore(),
+  });
+
+  final AuthTokenStore tokenStore;
 
   @override
   State<AttendanceApp> createState() => _AttendanceAppState();
@@ -56,6 +63,7 @@ class _AttendanceAppState extends State<AttendanceApp> {
         darkMode: _darkMode,
         themeLoaded: _themeLoaded,
         onDarkModeChanged: _setDarkMode,
+        tokenStore: widget.tokenStore,
       ),
     );
   }
@@ -67,17 +75,21 @@ class StudentGate extends StatefulWidget {
     required this.darkMode,
     required this.themeLoaded,
     required this.onDarkModeChanged,
+    required this.tokenStore,
   });
 
   final bool darkMode;
   final bool themeLoaded;
   final ValueChanged<bool> onDarkModeChanged;
+  final AuthTokenStore tokenStore;
 
   @override
   State<StudentGate> createState() => _StudentGateState();
 }
 
 class _StudentGateState extends State<StudentGate> {
+  static const _studentKey = 'student';
+
   Student? _student;
   bool _loading = true;
   bool _showInfoForm = false;
@@ -90,25 +102,38 @@ class _StudentGateState extends State<StudentGate> {
 
   Future<void> _loadStudent() async {
     final prefs = await SharedPreferences.getInstance();
+    final student = Student.fromJson(prefs.getString(_studentKey));
+    final token = await widget.tokenStore.readToken();
+
+    if (student == null || token == null || token.isEmpty) {
+      await prefs.remove(_studentKey);
+      await widget.tokenStore.clearToken();
+    }
+
     setState(() {
-      _student = Student.fromJson(prefs.getString('student'));
+      _student = student != null && token != null && token.isNotEmpty
+          ? student
+          : null;
       _loading = false;
     });
   }
 
-  Future<void> _saveStudent(Student student, bool rememberMe) async {
+  Future<void> _saveStudent(AuthSession session, bool rememberMe) async {
     final prefs = await SharedPreferences.getInstance();
     if (rememberMe) {
-      await prefs.setString('student', jsonEncode(student.toJson()));
+      await prefs.setString(_studentKey, jsonEncode(session.student.toJson()));
+      await widget.tokenStore.saveToken(session.token);
     } else {
-      await prefs.remove('student');
+      await prefs.remove(_studentKey);
+      await widget.tokenStore.clearToken();
     }
-    setState(() => _student = student);
+    setState(() => _student = session.student);
   }
 
   Future<void> _clearStudent() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('student');
+    await prefs.remove(_studentKey);
+    await widget.tokenStore.clearToken();
     setState(() {
       _student = null;
       _showInfoForm = true;

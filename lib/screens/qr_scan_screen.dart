@@ -39,8 +39,16 @@ class _QrScanScreenState extends State<QrScanScreen> {
               controller: _controller,
               fit: BoxFit.cover,
               placeholderBuilder: (context) => const _CameraPlaceholder(),
-              errorBuilder: (context, error) =>
-                  _CameraPermissionView(message: _cameraErrorMessage(error)),
+              errorBuilder: (context, error) {
+                _logScannerError(error);
+                return _CameraPermissionView(
+                  message: _cameraErrorMessage(error),
+                  details: _cameraErrorDetails(error),
+                  onRetry: () {
+                    _controller.start();
+                  },
+                );
+              },
               onDetect: (capture) {
                 if (_handled) return;
                 final value = capture.barcodes.isEmpty
@@ -144,9 +152,32 @@ class _QrScanScreenState extends State<QrScanScreen> {
     switch (error.errorCode) {
       case MobileScannerErrorCode.permissionDenied:
         return 'Kamera izni gerekebilir';
+      case MobileScannerErrorCode.unsupported:
+        return 'Bu cihazda kamera desteklenmiyor';
       default:
         return 'Kamera başlatılamadı';
     }
+  }
+
+  String _cameraErrorDetails(MobileScannerException error) {
+    final details = error.errorDetails;
+    final message = details?.message;
+    final code = details?.code;
+
+    if (message != null && message.isNotEmpty) {
+      return code == null || code.isEmpty ? message : '$code: $message';
+    }
+
+    return error.errorCode.message;
+  }
+
+  void _logScannerError(MobileScannerException error) {
+    debugPrint('MobileScanner error: ${error.errorCode.name}');
+    final details = error.errorDetails;
+    if (details == null) return;
+    debugPrint('MobileScanner error code: ${details.code}');
+    debugPrint('MobileScanner error message: ${details.message}');
+    debugPrint('MobileScanner error details: ${details.details}');
   }
 
   Future<void> _submitQr(String value) async {
@@ -349,9 +380,15 @@ class _CameraPlaceholder extends StatelessWidget {
 }
 
 class _CameraPermissionView extends StatelessWidget {
-  const _CameraPermissionView({required this.message});
+  const _CameraPermissionView({
+    required this.message,
+    required this.details,
+    required this.onRetry,
+  });
 
   final String message;
+  final String details;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -369,23 +406,44 @@ class _CameraPermissionView extends StatelessWidget {
             style: BorderStyle.solid,
           ),
         ),
-        child: Row(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.warning_amber_rounded,
-              color: AppColors.amber,
-              size: 34,
-            ),
-            const SizedBox(width: 14),
-            Flexible(
-              child: Text(
-                message,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: const Color(0xffffd27a),
-                  fontWeight: FontWeight.w800,
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  color: AppColors.amber,
+                  size: 34,
                 ),
+                const SizedBox(width: 14),
+                Flexible(
+                  child: Text(
+                    message,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: const Color(0xffffd27a),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              details,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.white.withValues(alpha: 0.72),
+                fontWeight: FontWeight.w600,
               ),
+            ),
+            const SizedBox(height: 14),
+            TextButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Tekrar dene'),
+              style: TextButton.styleFrom(foregroundColor: AppColors.accent),
             ),
           ],
         ),

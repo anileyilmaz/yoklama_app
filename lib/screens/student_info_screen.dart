@@ -1,10 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
-import '../models/student.dart';
+import '../models/auth_session.dart';
+import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 
 typedef StudentLoginCallback =
-    Future<void> Function(Student student, bool rememberMe);
+    Future<void> Function(AuthSession session, bool rememberMe);
 
 class StudentInfoScreen extends StatefulWidget {
   const StudentInfoScreen({super.key, required this.onSaved});
@@ -16,15 +19,28 @@ class StudentInfoScreen extends StatefulWidget {
 }
 
 class _StudentInfoScreenState extends State<StudentInfoScreen> {
+  static const _maxFailedAttempts = 15;
+  static const _defaultLockoutSeconds = 300;
+  static const _tooManyAttemptsMessage =
+      'Çok fazla hatalı giriş denemesi yaptınız. Lütfen 5 dakika sonra tekrar deneyin.';
+
   final _formKey = GlobalKey<FormState>();
+  final _authService = const AuthService();
   final _numberController = TextEditingController();
   final _passwordController = TextEditingController();
+  Timer? _lockoutTimer;
   bool _obscurePassword = true;
   bool _rememberMe = true;
   bool _submitting = false;
+  int _failedAttempts = 0;
+  int _lockoutRemainingSeconds = 0;
+  String? _lockoutMessage;
+
+  bool get _isLockedOut => _lockoutRemainingSeconds > 0;
 
   @override
   void dispose() {
+    _lockoutTimer?.cancel();
     _numberController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -99,7 +115,7 @@ class _StudentInfoScreenState extends State<StudentInfoScreen> {
                                   icon: Icons.person_rounded,
                                   keyboardType: TextInputType.number,
                                   validator: _required,
-                                  enabled: !_submitting,
+                                  enabled: !_submitting && !_isLockedOut,
                                 ),
                                 const SizedBox(height: 14),
                                 _Field(
@@ -109,13 +125,15 @@ class _StudentInfoScreenState extends State<StudentInfoScreen> {
                                   obscureText: _obscurePassword,
                                   textInputAction: TextInputAction.done,
                                   validator: _required,
-                                  enabled: !_submitting,
-                                  onFieldSubmitted: (_) => _submit(),
+                                  enabled: !_submitting && !_isLockedOut,
+                                  onFieldSubmitted: (_) {
+                                    if (!_isLockedOut) _submit();
+                                  },
                                   suffixIcon: IconButton(
                                     tooltip: _obscurePassword
                                         ? 'Şifreyi göster'
                                         : 'Şifreyi gizle',
-                                    onPressed: _submitting
+                                    onPressed: _submitting || _isLockedOut
                                         ? null
                                         : () {
                                             setState(
@@ -130,10 +148,19 @@ class _StudentInfoScreenState extends State<StudentInfoScreen> {
                                     ),
                                   ),
                                 ),
+                                if (_isLockedOut) ...[
+                                  const SizedBox(height: 18),
+                                  _LockoutNotice(
+                                    message:
+                                        _lockoutMessage ??
+                                        _tooManyAttemptsMessage,
+                                    remainingSeconds: _lockoutRemainingSeconds,
+                                  ),
+                                ],
                                 const SizedBox(height: 18),
                                 _RememberMeRow(
                                   value: _rememberMe,
-                                  enabled: !_submitting,
+                                  enabled: !_submitting && !_isLockedOut,
                                   onChanged: (value) {
                                     setState(() => _rememberMe = value);
                                   },
@@ -142,7 +169,7 @@ class _StudentInfoScreenState extends State<StudentInfoScreen> {
                                 _LoginButton(
                                   label: 'Giriş Yap',
                                   onPressed: _submit,
-                                  enabled: !_submitting,
+                                  enabled: !_submitting && !_isLockedOut,
                                   loading: _submitting,
                                 ),
                               ],
@@ -169,25 +196,143 @@ class _StudentInfoScreenState extends State<StudentInfoScreen> {
   }
 
   Future<void> _submit() async {
-    if (_submitting) return;
+    if (_submitting || _isLockedOut) return;
     if (!_formKey.currentState!.validate()) return;
     setState(() => _submitting = true);
 
-    await Future<void>.delayed(const Duration(milliseconds: 900));
-
     final studentNumber = _numberController.text.trim();
-    await widget.onSaved(
-      Student(
-        name: 'Demo Ogrenci',
-        number: studentNumber,
-        department: 'Bilgisayar Muhendisligi',
-      ),
-      _rememberMe,
-    );
+    final password = _passwordController.text;
+
+    try {
+      final session = await _authService.login(
+        studentNumber: studentNumber,
+        password: password,
+      );
+      await widget.onSaved(session, _rememberMe);
+      if (mounted) {
+        setState(() {
+          _failedAttempts = 0;
+          _lockoutMessage = null;
+        });
+      }
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      _handleLoginFailure(error);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Giriş yapılamadı: ${error.message}')),
+      );
+    } on Object catch (error) {
+      if (!mounted) return;
+      _handleLoginFailure(
+        AuthException(message: error.toString(), code: 'unknown_error'),
+      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Giriş yapılamadı: $error')));
+    }
 
     if (mounted) {
       setState(() => _submitting = false);
     }
+  }
+
+  void _handleLoginFailure(AuthException error) {
+    final isBackendLockout = error.code == 'too_many_attempts';
+    final nextFailedAttempts = _failedAttempts + 1;
+
+    if (isBackendLockout || nextFailedAttempts >= _maxFailedAttempts) {
+      _startLockout(
+        retryAfterSeconds: error.retryAfterSeconds ?? _defaultLockoutSeconds,
+        message: isBackendLockout ? error.message : _tooManyAttemptsMessage,
+      );
+      return;
+    }
+
+    setState(() => _failedAttempts = nextFailedAttempts);
+  }
+
+  void _startLockout({
+    required int retryAfterSeconds,
+    required String message,
+  }) {
+    _lockoutTimer?.cancel();
+    setState(() {
+      _failedAttempts = _maxFailedAttempts;
+      _lockoutMessage = message;
+      _lockoutRemainingSeconds = retryAfterSeconds;
+    });
+
+    _lockoutTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      if (_lockoutRemainingSeconds <= 1) {
+        timer.cancel();
+        setState(() {
+          _failedAttempts = 0;
+          _lockoutRemainingSeconds = 0;
+          _lockoutMessage = null;
+        });
+        return;
+      }
+
+      setState(() => _lockoutRemainingSeconds--);
+    });
+  }
+}
+
+class _LockoutNotice extends StatelessWidget {
+  const _LockoutNotice({required this.message, required this.remainingSeconds});
+
+  final String message;
+  final int remainingSeconds;
+
+  @override
+  Widget build(BuildContext context) {
+    final minutes = (remainingSeconds ~/ 60).toString().padLeft(2, '0');
+    final seconds = (remainingSeconds % 60).toString().padLeft(2, '0');
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.dangerSoftOf(context),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.danger.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.lock_clock_rounded, color: AppColors.danger),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  message,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textOf(context),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '$minutes:$seconds',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppColors.danger,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
