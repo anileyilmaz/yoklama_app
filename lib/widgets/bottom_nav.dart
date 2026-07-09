@@ -1,0 +1,42 @@
+import 'package:flutter/material.dart';
+
+import '../theme/app_theme.dart';
+
+class AppBottomNav extends StatelessWidget {
+  const AppBottomNav({
+    super.key,
+    required this.currentIndex,
+    required this.onChanged,
+  });
+
+  final int currentIndex;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return NavigationBar(
+      selectedIndex: currentIndex,
+      onDestinationSelected: onChanged,
+      backgroundColor: AppColors.cardOf(context),
+      indicatorColor: AppColors.mintOf(context),
+      height: 70,
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home_rounded),
+          label: 'Ana Sayfa',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.history_rounded),
+          selectedIcon: Icon(Icons.history_rounded),
+          label: 'Gecmis',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline_rounded),
+          selectedIcon: Icon(Icons.person_rounded),
+          label: 'Profil',
+        ),
+      ],
+    );
+  }
+}
