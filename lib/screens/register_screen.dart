@@ -22,7 +22,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  int _classYear = 1;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _submitting = false;
@@ -114,26 +113,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           prefixIcon: Icon(Icons.school_outlined),
                         ),
                         validator: _required,
-                      ),
-                      const SizedBox(height: 14),
-                      DropdownButtonFormField<int>(
-                        initialValue: _classYear,
-                        decoration: const InputDecoration(
-                          labelText: 'Sınıf',
-                          prefixIcon: Icon(Icons.stairs_outlined),
-                        ),
-                        items: const [1, 2, 3, 4]
-                            .map(
-                              (y) => DropdownMenuItem(
-                                value: y,
-                                child: Text('$y. sınıf'),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: _submitting
-                            ? null
-                            : (value) =>
-                                  setState(() => _classYear = value ?? 1),
                       ),
                       const SizedBox(height: 14),
                       TextFormField(
@@ -277,7 +256,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         name: _nameController.text,
         studentNumber: _numberController.text,
         department: _departmentController.text,
-        classYear: _classYear,
         password: _passwordController.text,
       );
       if (mounted) setState(() => _submitted = true);

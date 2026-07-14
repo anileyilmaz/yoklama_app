@@ -52,6 +52,16 @@ class AttendanceApi {
 
     final body = _decodeBody(response.body);
 
+    // Öğrenci derse kayıtlı değilse sunucu isteği reddetmez, hocaya onay isteği
+    // gönderir ve 202 + pending:true döner (bkz. server.js MOBILE_ENDPOINTS.ATTEND) —
+    // ne başarı (henüz yoklama işlenmedi) ne hata (istek kabul edildi), ayrı ele alınır.
+    if (response.statusCode == 202 && body['pending'] == true) {
+      throw AttendanceException(
+        _stringValue(body['message']) ?? 'İsteğiniz hocanıza iletildi.',
+        pending: true,
+      );
+    }
+
     if (response.statusCode >= 200 &&
         response.statusCode < 300 &&
         body['success'] != false) {
@@ -109,9 +119,14 @@ class AttendanceApi {
 }
 
 class AttendanceException implements Exception {
-  const AttendanceException(this.message);
+  const AttendanceException(this.message, {this.pending = false});
 
   final String message;
+
+  /// true ise istek başarısız olmadı — öğrenci derse kayıtlı olmadığı için
+  /// hocaya onay isteği gönderildi, sonucu socket.io üzerinden anlık gelecek
+  /// (bkz. LiveSessionService.onEnrollApproved/onEnrollRejected).
+  final bool pending;
 
   @override
   String toString() => message;

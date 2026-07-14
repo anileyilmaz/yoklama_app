@@ -17,7 +17,6 @@ class RegisterService {
     required String name,
     required String studentNumber,
     required String department,
-    required int classYear,
     required String password,
   }) async {
     final client = _client ?? http.Client();
@@ -29,7 +28,6 @@ class RegisterService {
             'name': name.trim(),
             'studentNumber': studentNumber.trim(),
             'department': department.trim(),
-            'classYear': classYear,
             'password': password,
           }),
         )

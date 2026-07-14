@@ -185,6 +185,17 @@ class _QrScanScreenState extends State<QrScanScreen> {
       await Navigator.of(
         context,
       ).push(MaterialPageRoute(builder: (_) => SuccessScreen(result: result)));
+    } on AttendanceException catch (error) {
+      if (!mounted) return;
+      if (error.pending) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Yoklama gönderilemedi: ${error.message}')),
+        );
+      }
     } on Object catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(

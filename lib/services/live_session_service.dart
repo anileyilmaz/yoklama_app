@@ -49,6 +49,8 @@ class LiveSessionService {
   Future<void> connect({
     required void Function(ActiveSession session) onStarted,
     required void Function(int sessionId) onEnded,
+    void Function(ActiveSession session)? onEnrollApproved,
+    void Function(ActiveSession session)? onEnrollRejected,
   }) async {
     final token = await _tokenStore.readToken();
     if (token == null || token.isEmpty) return;
@@ -71,6 +73,20 @@ class LiveSessionService {
       if (data is Map) {
         final sessionId = (data['sessionId'] as num?)?.toInt();
         if (sessionId != null) onEnded(sessionId);
+      }
+    });
+    // Derse kayıtlı olmadan QR okutup hocaya onay isteği gönderdiğinde (bkz.
+    // AttendanceException.pending) sonucu anlık bildirir — öğrenci kayıtlı
+    // olmadığı derslerin odalarına giremediği için sunucu bunu kişisel
+    // "student-<id>" odası üzerinden gönderir (bkz. server.js socket.io bölümü).
+    socket.on('enrollRequest:approved', (data) {
+      if (data is Map && onEnrollApproved != null) {
+        onEnrollApproved(ActiveSession.fromJson(Map<String, dynamic>.from(data)));
+      }
+    });
+    socket.on('enrollRequest:rejected', (data) {
+      if (data is Map && onEnrollRejected != null) {
+        onEnrollRejected(ActiveSession.fromJson(Map<String, dynamic>.from(data)));
       }
     });
     socket.connect();

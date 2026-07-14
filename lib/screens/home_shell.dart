@@ -67,6 +67,27 @@ class _HomeShellState extends State<HomeShell> {
               .toList();
         });
       },
+      onEnrollApproved: (session) {
+        if (!mounted) return;
+        _refreshAttendanceData();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${session.courseName} dersine kaydınız onaylandı, yoklamanız işlendi.',
+            ),
+          ),
+        );
+      },
+      onEnrollRejected: (session) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${session.courseName} dersine katılım isteğiniz hoca tarafından reddedildi.',
+            ),
+          ),
+        );
+      },
     );
   }
 
