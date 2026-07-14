@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -17,6 +18,10 @@ import 'theme/app_theme.dart';
 /// Bu override SADECE ApiConfig'in işaret ettiği host için sertifika hatasını
 /// yok sayar — prod'da gerçek bir sertifikaya geçilince bu dosyaya dokunmaya
 /// gerek kalmaz, host eşleşmediği sürece devre dışı kalır.
+///
+/// GÜVENLİK: `main()` bunu yalnızca `kDebugMode`da etkinleştirir — release build'de
+/// hiçbir sertifika bypass'ı olmaz. Bu satır olmadan kDebugMode kontrolsüz her build'e
+/// (release dahil) sızar ve o host için MITM'e karşı korumasız kalır.
 class _DevHttpOverrides extends HttpOverrides {
   @override
   HttpClient createHttpClient(SecurityContext? context) {
@@ -27,7 +32,9 @@ class _DevHttpOverrides extends HttpOverrides {
 }
 
 void main() {
-  HttpOverrides.global = _DevHttpOverrides();
+  if (kDebugMode) {
+    HttpOverrides.global = _DevHttpOverrides();
+  }
   runApp(const AttendanceApp());
 }
 

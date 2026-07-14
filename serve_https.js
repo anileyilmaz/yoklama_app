@@ -32,7 +32,12 @@ const server = https.createServer(
   (req, res) => {
     const urlPath = decodeURIComponent(req.url.split("?")[0]);
     let filePath = path.join(ROOT, urlPath === "/" ? "index.html" : urlPath);
-    if (!filePath.startsWith(ROOT)) {
+    // Ham .startsWith(ROOT) kontrolü ayraç-farkında değildir: ROOT="/a/build/web"
+    // iken "/a/build/web-secret/..." gibi bir kardeş dizin de bu string'i geçerdi
+    // (path traversal bypass). path.relative ile ROOT dışına çıkıp çıkmadığını
+    // (".." ile başlıyor mu / mutlak mı) doğru şekilde kontrol ediyoruz.
+    const rel = path.relative(ROOT, filePath);
+    if (rel.startsWith("..") || path.isAbsolute(rel)) {
       res.writeHead(403);
       return res.end("Forbidden");
     }
