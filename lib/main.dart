@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,10 +9,25 @@ import 'models/student.dart';
 import 'screens/student_info_screen.dart';
 import 'screens/home_shell.dart';
 import 'screens/welcome_screen.dart';
+import 'services/api_config.dart';
 import 'services/auth_token_store.dart';
 import 'theme/app_theme.dart';
 
+/// Geliştirme sunucusu self-signed sertifika kullanıyor (bkz. ApiConfig.baseUrl).
+/// Bu override SADECE ApiConfig'in işaret ettiği host için sertifika hatasını
+/// yok sayar — prod'da gerçek bir sertifikaya geçilince bu dosyaya dokunmaya
+/// gerek kalmaz, host eşleşmediği sürece devre dışı kalır.
+class _DevHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    final trustedHost = Uri.parse(ApiConfig.baseUrl).host;
+    return super.createHttpClient(context)
+      ..badCertificateCallback = (cert, host, port) => host == trustedHost;
+  }
+}
+
 void main() {
+  HttpOverrides.global = _DevHttpOverrides();
   runApp(const AttendanceApp());
 }
 
@@ -148,6 +164,7 @@ class _StudentGateState extends State<StudentGate> {
     final student = _student;
     if (student != null) {
       return HomeShell(
+        key: ValueKey(student.number),
         student: student,
         onLogout: _clearStudent,
         darkMode: widget.darkMode,

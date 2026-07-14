@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/primary_button.dart';
+import 'register_screen.dart';
 
 typedef StudentLoginCallback =
     Future<void> Function(AuthSession session, bool rememberMe);
@@ -159,6 +160,17 @@ class _StudentInfoScreenState extends State<StudentInfoScreen> {
                               loading: _submitting,
                               loadingLabel: 'Giriş yapılıyor...',
                               height: 54,
+                            ),
+                            const SizedBox(height: 18),
+                            TextButton(
+                              onPressed: _submitting || _isLockedOut
+                                  ? null
+                                  : () => Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => const RegisterScreen(),
+                                      ),
+                                    ),
+                              child: const Text('Hesabın yok mu? Kayıt ol'),
                             ),
                           ],
                         ),
