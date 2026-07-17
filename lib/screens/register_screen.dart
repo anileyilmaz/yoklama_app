@@ -170,6 +170,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         decoration: const InputDecoration(
                           labelText: 'Öğrenci Numarası',
                           prefixIcon: Icon(Icons.person_outline_rounded),
+                          suffixText: '@ogrenci.ege.edu.tr',
+                          suffixStyle: TextStyle(fontSize: 13),
                         ),
                         validator: _required,
                       ),
