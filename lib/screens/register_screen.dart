@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../models/department.dart';
+import '../models/faculty.dart';
 import '../services/register_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/soft_card.dart';
+
+/// Bölüm açılır listesindeki "Listede yok / elle yaz" seçeneğinin sentinel değeri —
+/// gerçek bir bölüm adıyla asla çakışmaz.
+const _manualDepartmentSentinel = '__manual__';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -27,6 +33,69 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _submitting = false;
   bool _submitted = false;
   String? _error;
+
+  List<Faculty> _faculties = [];
+  int? _selectedFacultyId;
+  bool _facultiesLoading = true;
+  String? _facultiesError;
+
+  List<Department> _departments = [];
+  String? _selectedDepartmentName;
+  bool _departmentsLoading = false;
+  String? _departmentsError;
+  bool _manualDepartmentEntry = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFaculties();
+  }
+
+  Future<void> _loadFaculties() async {
+    setState(() {
+      _facultiesLoading = true;
+      _facultiesError = null;
+    });
+    try {
+      final faculties = await _registerService.fetchFaculties();
+      if (!mounted) return;
+      setState(() => _faculties = faculties);
+    } on RegisterException catch (error) {
+      if (mounted) setState(() => _facultiesError = error.message);
+    } on Object catch (error) {
+      if (mounted) setState(() => _facultiesError = error.toString());
+    }
+    if (mounted) setState(() => _facultiesLoading = false);
+  }
+
+  void _onFacultyChanged(int? facultyId) {
+    setState(() {
+      _selectedFacultyId = facultyId;
+      _selectedDepartmentName = null;
+      _manualDepartmentEntry = false;
+      _departmentController.clear();
+      _departments = [];
+      _departmentsError = null;
+    });
+    if (facultyId != null) _loadDepartments(facultyId);
+  }
+
+  Future<void> _loadDepartments(int facultyId) async {
+    setState(() {
+      _departmentsLoading = true;
+      _departmentsError = null;
+    });
+    try {
+      final departments = await _registerService.fetchDepartments(facultyId);
+      if (!mounted) return;
+      setState(() => _departments = departments);
+    } on RegisterException catch (error) {
+      if (mounted) setState(() => _departmentsError = error.message);
+    } on Object catch (error) {
+      if (mounted) setState(() => _departmentsError = error.toString());
+    }
+    if (mounted) setState(() => _departmentsLoading = false);
+  }
 
   @override
   void dispose() {
@@ -105,15 +174,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         validator: _required,
                       ),
                       const SizedBox(height: 14),
-                      TextFormField(
-                        controller: _departmentController,
-                        enabled: !_submitting,
-                        decoration: const InputDecoration(
-                          labelText: 'Bölüm',
-                          prefixIcon: Icon(Icons.school_outlined),
-                        ),
-                        validator: _required,
-                      ),
+                      _buildFacultyField(),
+                      const SizedBox(height: 14),
+                      _buildDepartmentField(),
                       const SizedBox(height: 14),
                       TextFormField(
                         controller: _passwordController,
@@ -240,6 +303,144 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  Widget _buildFacultyField() {
+    if (_facultiesLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 10),
+        child: Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2.4),
+          ),
+        ),
+      );
+    }
+    if (_facultiesError != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(_facultiesError!, style: TextStyle(color: AppColors.danger)),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: _loadFaculties,
+            child: const Text('Tekrar dene'),
+          ),
+        ],
+      );
+    }
+    return DropdownButtonFormField<int>(
+      initialValue: _selectedFacultyId,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Fakülte',
+        prefixIcon: Icon(Icons.account_balance_outlined),
+      ),
+      items: _faculties
+          .map(
+            (f) => DropdownMenuItem(
+              value: f.id,
+              child: Text(f.name, overflow: TextOverflow.ellipsis),
+            ),
+          )
+          .toList(),
+      onChanged: _submitting ? null : _onFacultyChanged,
+      validator: (value) => value == null ? 'Fakülte seçimi zorunlu' : null,
+    );
+  }
+
+  Widget _buildDepartmentField() {
+    if (_selectedFacultyId == null) {
+      return InputDecorator(
+        decoration: const InputDecoration(
+          labelText: 'Bölüm',
+          prefixIcon: Icon(Icons.school_outlined),
+          enabled: false,
+        ),
+        child: Text(
+          'Önce fakülte seçin',
+          style: TextStyle(color: AppColors.mutedOf(context)),
+        ),
+      );
+    }
+    if (_departmentsLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 10),
+        child: Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2.4),
+          ),
+        ),
+      );
+    }
+    if (_departmentsError != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(_departmentsError!, style: TextStyle(color: AppColors.danger)),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: () => _loadDepartments(_selectedFacultyId!),
+            child: const Text('Tekrar dene'),
+          ),
+        ],
+      );
+    }
+    if (_manualDepartmentEntry) {
+      return TextFormField(
+        controller: _departmentController,
+        enabled: !_submitting,
+        decoration: InputDecoration(
+          labelText: 'Bölüm (elle yazın)',
+          prefixIcon: const Icon(Icons.school_outlined),
+          suffixIcon: TextButton(
+            onPressed: _submitting
+                ? null
+                : () => setState(() {
+                    _manualDepartmentEntry = false;
+                    _departmentController.clear();
+                  }),
+            child: const Text('Listeden seç'),
+          ),
+        ),
+        validator: _required,
+      );
+    }
+    return DropdownButtonFormField<String>(
+      initialValue: _selectedDepartmentName,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Bölüm',
+        prefixIcon: Icon(Icons.school_outlined),
+      ),
+      items: [
+        ..._departments.map(
+          (d) => DropdownMenuItem(
+            value: d.name,
+            child: Text(d.name, overflow: TextOverflow.ellipsis),
+          ),
+        ),
+        const DropdownMenuItem(
+          value: _manualDepartmentSentinel,
+          child: Text('Listede yok / elle yaz'),
+        ),
+      ],
+      onChanged: _submitting
+          ? null
+          : (value) => setState(() {
+              if (value == _manualDepartmentSentinel) {
+                _manualDepartmentEntry = true;
+                _selectedDepartmentName = null;
+              } else {
+                _selectedDepartmentName = value;
+              }
+            }),
+      validator: (value) => value == null ? 'Bölüm seçimi zorunlu' : null,
+    );
+  }
+
   String? _required(String? value) {
     if (value == null || value.trim().isEmpty) return 'Bu alan zorunlu';
     return null;
@@ -255,8 +456,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await _registerService.register(
         name: _nameController.text,
         studentNumber: _numberController.text,
-        department: _departmentController.text,
+        department: _manualDepartmentEntry
+            ? _departmentController.text
+            : (_selectedDepartmentName ?? ''),
         password: _passwordController.text,
+        facultyId: _selectedFacultyId!,
       );
       if (mounted) setState(() => _submitted = true);
     } on RegisterException catch (error) {

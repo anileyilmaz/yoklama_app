@@ -163,7 +163,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _InfoLine(label: 'Ad Soyad', value: student.name),
                 _InfoLine(label: 'Öğrenci Numarası', value: student.number),
                 _InfoLine(
-                  label: 'Sınıf / Bölüm',
+                  label: 'Bölüm',
                   value: student.department,
                   showLine: false,
                 ),
