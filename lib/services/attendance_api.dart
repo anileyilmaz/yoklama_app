@@ -10,7 +10,7 @@ import 'api_config.dart';
 import 'auth_token_store.dart';
 import 'device_id_store.dart';
 
-typedef _LocationSnapshot = (double lat, double lng, bool isMocked);
+typedef _LocationSnapshot = ({double lat, double lng, bool isMocked});
 
 class AttendanceApi {
   const AttendanceApi({
@@ -48,9 +48,9 @@ class AttendanceApi {
           },
           body: jsonEncode({
             'qr': qr,
-            'lat': location?.$1,
-            'lng': location?.$2,
-            'mockLocation': location?.$3,
+            'lat': location?.lat,
+            'lng': location?.lng,
+            'mockLocation': location?.isMocked,
             'deviceId': deviceId,
           }),
         )
@@ -98,6 +98,13 @@ class AttendanceApi {
   // gelir) — sadece konum doğrulamalı bir oturuma katılmaya çalışırken izin
   // reddi/servis kapalı gibi durumlarda sunucudan gelen "konum izni verin" (400)
   // mesajı kullanıcıya net bir yönlendirme olarak zaten görünür.
+  //
+  // timeLimit KISA tutulur (5 sn): bu istek HTTP çağrısından önce, senkron olarak
+  // bekleniyor ve backend'deki QR penceresi artık sadece ~20 sn (bkz. server.js
+  // QR_WINDOW_MS) — sınıf içinde zayıf GPS sinyaliyle uzun bir konum beklemesi,
+  // isteğin gönderilmesini geciktirip QR'ı süresi dolmadan sunucuya ulaştıramayabilir.
+  // Konum alınamazsa zaten null'a düşüp GPS'siz devam ediyoruz, bu yüzden kısa tutmak
+  // (sadece hızlı bir fix varsa kullanmak) uzun beklemekten daha iyi bir tercih.
   Future<_LocationSnapshot?> _readLocation() async {
     try {
       if (!await Geolocator.isLocationServiceEnabled()) return null;
@@ -112,10 +119,14 @@ class AttendanceApi {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 8),
+          timeLimit: Duration(seconds: 5),
         ),
       );
-      return (position.latitude, position.longitude, position.isMocked);
+      return (
+        lat: position.latitude,
+        lng: position.longitude,
+        isMocked: position.isMocked,
+      );
     } catch (_) {
       return null;
     }
