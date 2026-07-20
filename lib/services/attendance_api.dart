@@ -7,15 +7,18 @@ import 'package:http/http.dart' as http;
 import '../models/attendance_result.dart';
 import 'api_config.dart';
 import 'auth_token_store.dart';
+import 'device_id_store.dart';
 
 class AttendanceApi {
   const AttendanceApi({
     AuthTokenStore tokenStore = const SecureAuthTokenStore(),
-  }) : this._(tokenStore);
+    DeviceIdStore deviceIdStore = const SecureDeviceIdStore(),
+  }) : this._(tokenStore, deviceIdStore);
 
-  const AttendanceApi._(this._tokenStore);
+  const AttendanceApi._(this._tokenStore, this._deviceIdStore);
 
   final AuthTokenStore _tokenStore;
+  final DeviceIdStore _deviceIdStore;
 
   Future<AttendanceResult> submit({required String qr}) async {
     final token = await _tokenStore.readToken();
@@ -24,6 +27,8 @@ class AttendanceApi {
         'Oturum bulunamadı. Lütfen tekrar giriş yapın.',
       );
     }
+
+    final deviceId = await _deviceIdStore.getOrCreateDeviceId();
 
     final base = Uri.parse(ApiConfig.baseUrl.trim());
     final endpoint = base.replace(
@@ -37,7 +42,12 @@ class AttendanceApi {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $token',
           },
-          body: jsonEncode({'qr': qr, 'lat': null, 'lng': null}),
+          body: jsonEncode({
+            'qr': qr,
+            'lat': null,
+            'lng': null,
+            'deviceId': deviceId,
+          }),
         )
         .timeout(const Duration(seconds: 12))
         .onError<SocketException>((error, stackTrace) {

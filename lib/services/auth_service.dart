@@ -7,13 +7,16 @@ import 'package:http/http.dart' as http;
 import '../models/auth_session.dart';
 import '../models/student.dart';
 import 'api_config.dart';
+import 'device_id_store.dart';
 
 class AuthService {
-  const AuthService({http.Client? client}) : this._(client);
+  const AuthService({http.Client? client, DeviceIdStore deviceIdStore = const SecureDeviceIdStore()})
+    : this._(client, deviceIdStore);
 
-  const AuthService._(this._client);
+  const AuthService._(this._client, this._deviceIdStore);
 
   final http.Client? _client;
+  final DeviceIdStore _deviceIdStore;
 
   Future<AuthSession> login({
     required String studentNumber,
@@ -29,12 +32,18 @@ class AuthService {
       );
     }
 
+    final deviceId = await _deviceIdStore.getOrCreateDeviceId();
+
     final client = _client ?? http.Client();
     final response = await client
         .post(
           _endpoint('/login'),
           headers: const {'Content-Type': 'application/json'},
-          body: jsonEncode({'studentNumber': number, 'password': rawPassword}),
+          body: jsonEncode({
+            'studentNumber': number,
+            'password': rawPassword,
+            'deviceId': deviceId,
+          }),
         )
         .timeout(const Duration(seconds: 12))
         .onError<SocketException>((error, stackTrace) {
