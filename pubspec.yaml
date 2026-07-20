@@ -39,6 +39,7 @@ dependencies:
   shared_preferences: ^2.5.3
   google_fonts: ^6.2.1
   uuid: ^4.6.0
+  geolocator: ^14.0.2
 
 dev_dependencies:
   flutter_test:

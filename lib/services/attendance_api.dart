@@ -2,12 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/attendance_result.dart';
 import 'api_config.dart';
 import 'auth_token_store.dart';
 import 'device_id_store.dart';
+
+typedef _LocationSnapshot = (double lat, double lng, bool isMocked);
 
 class AttendanceApi {
   const AttendanceApi({
@@ -29,6 +32,7 @@ class AttendanceApi {
     }
 
     final deviceId = await _deviceIdStore.getOrCreateDeviceId();
+    final location = await _readLocation();
 
     final base = Uri.parse(ApiConfig.baseUrl.trim());
     final endpoint = base.replace(
@@ -44,8 +48,9 @@ class AttendanceApi {
           },
           body: jsonEncode({
             'qr': qr,
-            'lat': null,
-            'lng': null,
+            'lat': location?.$1,
+            'lng': location?.$2,
+            'mockLocation': location?.$3,
             'deviceId': deviceId,
           }),
         )
@@ -86,6 +91,34 @@ class AttendanceApi {
           _stringValue(body['error']) ??
           'Yoklama gönderilemedi. Lütfen tekrar deneyin.',
     );
+  }
+
+  // Konum doğrulaması olmayan oturumlar için bu her zaman denenip başarısızsa
+  // sessizce null'a düşer (sunucu zaten session.lat==null'da lat/lng'i görmezden
+  // gelir) — sadece konum doğrulamalı bir oturuma katılmaya çalışırken izin
+  // reddi/servis kapalı gibi durumlarda sunucudan gelen "konum izni verin" (400)
+  // mesajı kullanıcıya net bir yönlendirme olarak zaten görünür.
+  Future<_LocationSnapshot?> _readLocation() async {
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) return null;
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return null;
+      }
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 8),
+        ),
+      );
+      return (position.latitude, position.longitude, position.isMocked);
+    } catch (_) {
+      return null;
+    }
   }
 
   String _joinPath(String basePath, String apiPath) {

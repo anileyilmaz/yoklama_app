@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Tahtadaki QR kodu okutmak icin kamera izni gereklidir.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Konum doğrulaması isteyen yoklamalarda sınıf içinde olduğunuzu teyit etmek için konum izni gereklidir.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
