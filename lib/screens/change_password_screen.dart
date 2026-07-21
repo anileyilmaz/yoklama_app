@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../services/password_changer.dart';
 import '../services/password_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/primary_button.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
-  const ChangePasswordScreen({super.key});
+  const ChangePasswordScreen({
+    super.key,
+    this.passwordChanger = const PasswordService(),
+  });
+
+  final PasswordChanger passwordChanger;
 
   @override
   State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
@@ -13,7 +19,6 @@ class ChangePasswordScreen extends StatefulWidget {
 
 class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _passwordService = const PasswordService();
   final _currentController = TextEditingController();
   final _newController = TextEditingController();
   final _confirmController = TextEditingController();
@@ -35,7 +40,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     setState(() => _submitting = true);
 
     try {
-      await _passwordService.changePassword(
+      await widget.passwordChanger.changePassword(
         currentPassword: _currentController.text,
         newPassword: _newController.text,
       );

@@ -8,8 +8,10 @@ import 'api_config.dart';
 import 'auth_token_store.dart';
 import 'password_changer.dart';
 
-class PasswordService implements PasswordChanger {
-  const PasswordService({this._tokenStore = const SecureAuthTokenStore()});
+class StaffPasswordService implements PasswordChanger {
+  const StaffPasswordService({
+    this._tokenStore = const SecureAuthTokenStore(),
+  });
 
   final AuthTokenStore _tokenStore;
 
@@ -20,19 +22,14 @@ class PasswordService implements PasswordChanger {
   }) async {
     final token = await _tokenStore.readToken();
     if (token == null || token.isEmpty) {
-      throw const PasswordException(
+      throw const StaffPasswordException(
         'Oturum bulunamadı. Lütfen tekrar giriş yapın.',
       );
     }
 
-    final base = Uri.parse(ApiConfig.baseUrl.trim());
-    final endpoint = base.replace(
-      path: _joinPath(base.path, '/change-password'),
-    );
-
     final response = await http
         .post(
-          endpoint,
+          Uri.parse('${ApiConfig.staffBaseUrl}/change-password'),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $token',
@@ -44,19 +41,19 @@ class PasswordService implements PasswordChanger {
         )
         .timeout(const Duration(seconds: 12))
         .onError<SocketException>((error, stackTrace) {
-          throw const PasswordException('Sunucuya ulaşılamıyor');
+          throw const StaffPasswordException('Sunucuya ulaşılamıyor');
         })
         .onError<TimeoutException>((error, stackTrace) {
-          throw const PasswordException('Sunucuya ulaşılamıyor');
+          throw const StaffPasswordException('Sunucuya ulaşılamıyor');
         })
         .onError<http.ClientException>((error, stackTrace) {
-          throw const PasswordException('Sunucuya ulaşılamıyor');
+          throw const StaffPasswordException('Sunucuya ulaşılamıyor');
         });
 
     final body = _decodeBody(response.body);
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw PasswordException(
+      throw StaffPasswordException(
         body['message'] as String? ??
             body['error'] as String? ??
             'Şifre değiştirilemedi. Lütfen tekrar deneyin.',
@@ -67,14 +64,6 @@ class PasswordService implements PasswordChanger {
     if (newToken != null && newToken.isNotEmpty) {
       await _tokenStore.saveToken(newToken);
     }
-  }
-
-  String _joinPath(String basePath, String path) {
-    final normalizedBase = basePath.endsWith('/')
-        ? basePath.substring(0, basePath.length - 1)
-        : basePath;
-    final normalizedPath = path.startsWith('/') ? path : '/$path';
-    return '$normalizedBase$normalizedPath';
   }
 
   Map<String, dynamic> _decodeBody(String source) {
@@ -88,8 +77,8 @@ class PasswordService implements PasswordChanger {
   }
 }
 
-class PasswordException implements Exception {
-  const PasswordException(this.message);
+class StaffPasswordException implements Exception {
+  const StaffPasswordException(this.message);
 
   final String message;
 
