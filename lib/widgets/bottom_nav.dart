@@ -7,10 +7,35 @@ class AppBottomNav extends StatelessWidget {
     super.key,
     required this.currentIndex,
     required this.onChanged,
+    this.destinations = _studentDestinations,
   });
 
   final int currentIndex;
   final ValueChanged<int> onChanged;
+  final List<NavigationDestination> destinations;
+
+  static const _studentDestinations = [
+    NavigationDestination(
+      icon: Icon(Icons.home_outlined),
+      selectedIcon: Icon(Icons.home_rounded),
+      label: 'Ana Sayfa',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.history_rounded),
+      selectedIcon: Icon(Icons.history_rounded),
+      label: 'Geçmiş',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.menu_book_outlined),
+      selectedIcon: Icon(Icons.menu_book_rounded),
+      label: 'Derslerim',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.person_outline_rounded),
+      selectedIcon: Icon(Icons.person_rounded),
+      label: 'Profil',
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -20,28 +45,7 @@ class AppBottomNav extends StatelessWidget {
       backgroundColor: AppColors.cardOf(context),
       indicatorColor: AppColors.primarySoftOf(context),
       height: 70,
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(Icons.home_outlined),
-          selectedIcon: Icon(Icons.home_rounded),
-          label: 'Ana Sayfa',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.history_rounded),
-          selectedIcon: Icon(Icons.history_rounded),
-          label: 'Geçmiş',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.menu_book_outlined),
-          selectedIcon: Icon(Icons.menu_book_rounded),
-          label: 'Derslerim',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.person_outline_rounded),
-          selectedIcon: Icon(Icons.person_rounded),
-          label: 'Profil',
-        ),
-      ],
+      destinations: destinations,
     );
   }
 }

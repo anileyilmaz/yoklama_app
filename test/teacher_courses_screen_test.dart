@@ -13,7 +13,7 @@ void main() {
             TeacherCourse(id: 1, name: 'Veri Yapıları', enrolled: 42),
             TeacherCourse(id: 2, name: 'Algoritmalar', enrolled: 30),
           ]),
-          onSessionStarted: (_) {},
+          onSessionStarted: (_, _) {},
         ),
       ),
     );
@@ -28,7 +28,7 @@ void main() {
       MaterialApp(
         home: TeacherCoursesScreen(
           coursesFuture: Future.value(const []),
-          onSessionStarted: (_) {},
+          onSessionStarted: (_, _) {},
         ),
       ),
     );

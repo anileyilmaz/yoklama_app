@@ -46,6 +46,11 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  # Yalnızca test/teacher_home_shell_test.dart'ta FlutterSecureStoragePlatform.instance'ı
+  # değiştirmek için kullanılıyor (bkz. o dosyadaki yorum) — üretim kodu bu paketi
+  # doğrudan içe aktarmıyor.
+  flutter_secure_storage_platform_interface: ^1.1.2
+
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your

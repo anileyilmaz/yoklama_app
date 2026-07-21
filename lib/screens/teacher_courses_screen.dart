@@ -15,7 +15,7 @@ class TeacherCoursesScreen extends StatefulWidget {
   });
 
   final Future<List<TeacherCourse>> coursesFuture;
-  final ValueChanged<int> onSessionStarted;
+  final void Function(int sessionId, String courseName) onSessionStarted;
 
   @override
   State<TeacherCoursesScreen> createState() => _TeacherCoursesScreenState();
@@ -27,6 +27,7 @@ class _TeacherCoursesScreenState extends State<TeacherCoursesScreen> {
   bool _gpsEnabled = false;
   final _radiusController = TextEditingController(text: '100');
   bool _starting = false;
+  List<TeacherCourse> _courses = const [];
 
   @override
   void dispose() {
@@ -75,13 +76,14 @@ class _TeacherCoursesScreenState extends State<TeacherCoursesScreen> {
         lng = location?.lng;
         radius = int.tryParse(_radiusController.text) ?? 100;
       }
+      final course = _courses.firstWhere((c) => c.id == courseId);
       final sessionId = await _sessionService.startSession(
         courseId: courseId,
         lat: lat,
         lng: lng,
         radius: radius,
       );
-      widget.onSessionStarted(sessionId);
+      widget.onSessionStarted(sessionId, course.name);
     } on Object catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -118,6 +120,7 @@ class _TeacherCoursesScreenState extends State<TeacherCoursesScreen> {
             }
 
             final courses = snapshot.data ?? const <TeacherCourse>[];
+            _courses = courses;
 
             return Center(
               child: ConstrainedBox(
