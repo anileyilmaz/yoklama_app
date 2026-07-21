@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import '../models/live_attendance_entry.dart';
 import '../models/teaching_session_detail.dart';
 import '../models/teaching_session_summary.dart';
 import 'api_config.dart';
@@ -123,6 +124,36 @@ class TeacherSessionService {
       );
     }
     return _detailFromJson(body);
+  }
+
+  Future<List<LiveAttendanceEntry>> fetchAttendance(int sessionId) async {
+    final token = await _requireToken();
+    final client = _client ?? http.Client();
+    final response = await client
+        .get(
+          Uri.parse('${ApiConfig.staffBaseUrl}/sessions/$sessionId/attendance'),
+          headers: {'Authorization': 'Bearer $token'},
+        )
+        .timeout(const Duration(seconds: 12))
+        .onError<SocketException>((error, stackTrace) {
+          throw const TeacherSessionException('Sunucuya ulaşılamıyor');
+        })
+        .onError<TimeoutException>((error, stackTrace) {
+          throw const TeacherSessionException('Sunucuya ulaşılamıyor');
+        })
+        .onError<http.ClientException>((error, stackTrace) {
+          throw const TeacherSessionException('Sunucuya ulaşılamıyor');
+        });
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw const TeacherSessionException('Katılım listesi alınamadı.');
+    }
+    final decoded = _decode(response.body);
+    final list = decoded is List ? decoded : const [];
+    return list
+        .whereType<Map<String, dynamic>>()
+        .map(LiveAttendanceEntry.fromJson)
+        .toList();
   }
 
   Future<void> endSession(int sessionId) async {
