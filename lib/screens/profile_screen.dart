@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../models/student.dart';
 import '../services/profile_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/profile_row.dart';
 import '../widgets/soft_card.dart';
+import '../widgets/theme_switch_row.dart';
 import 'change_password_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -108,12 +110,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         padding: EdgeInsets.zero,
                         child: Column(
                           children: [
-                            _ProfileRow(
+                            ProfileRow(
                               icon: Icons.person_outline_rounded,
                               title: 'Bilgilerim',
                               onTap: () => _showStudentInfo(context, student),
                             ),
-                            _ProfileRow(
+                            ProfileRow(
                               icon: Icons.lock_outline_rounded,
                               title: 'Şifre Değiştir',
                               onTap: () => Navigator.of(context).push(
@@ -122,12 +124,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                             ),
-                            _ThemeSwitchRow(
+                            ThemeSwitchRow(
                               enabled: widget.darkMode,
                               onChanged: widget.onDarkModeChanged,
                             ),
                             const _SwitchRow(),
-                            _ProfileRow(
+                            ProfileRow(
                               icon: Icons.logout_rounded,
                               title: 'Çıkış Yap',
                               danger: true,
@@ -241,96 +243,6 @@ class _InfoLine extends StatelessWidget {
               textAlign: TextAlign.right,
               style: const TextStyle(fontWeight: FontWeight.w800),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProfileRow extends StatelessWidget {
-  const _ProfileRow({
-    required this.icon,
-    required this.title,
-    this.onTap,
-    this.danger = false,
-    this.showLine = true,
-  });
-
-  final IconData icon;
-  final String title;
-  final VoidCallback? onTap;
-  final bool danger;
-  final bool showLine;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = danger ? AppColors.danger : AppColors.textOf(context);
-
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        decoration: BoxDecoration(
-          border: showLine
-              ? Border(bottom: BorderSide(color: AppColors.lineOf(context)))
-              : null,
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 21),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(color: color, fontWeight: FontWeight.w700),
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: color.withValues(alpha: 0.55),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ThemeSwitchRow extends StatelessWidget {
-  const _ThemeSwitchRow({required this.enabled, required this.onChanged});
-
-  final bool enabled;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.lineOf(context))),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.dark_mode_outlined,
-            size: 21,
-            color: AppColors.textOf(context),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              'Koyu Mod',
-              style: TextStyle(
-                color: AppColors.textOf(context),
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          Switch(
-            value: enabled,
-            activeThumbColor: AppColors.brandOf(context),
-            onChanged: onChanged,
           ),
         ],
       ),
