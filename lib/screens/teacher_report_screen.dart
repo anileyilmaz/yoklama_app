@@ -37,6 +37,23 @@ class _TeacherReportScreenState extends State<TeacherReportScreen> {
         child: FutureBuilder<List<TeacherCourse>>(
           future: widget.coursesFuture,
           builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: SoftCard(
+                    child: Text(
+                      '${snapshot.error}',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              );
+            }
+
             final courses = snapshot.data ?? const <TeacherCourse>[];
 
             return Center(
