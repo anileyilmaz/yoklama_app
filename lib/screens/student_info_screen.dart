@@ -6,7 +6,10 @@ import '../models/auth_session.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/login_card.dart';
+import '../widgets/login_field.dart';
 import '../widgets/primary_button.dart';
+import '../widgets/subtitle_divider.dart';
 import 'register_screen.dart';
 
 typedef StudentLoginCallback =
@@ -79,7 +82,7 @@ class _StudentInfoScreenState extends State<StudentInfoScreen> {
                       SizedBox(height: topGap),
                       const AppLogo(size: 84),
                       SizedBox(height: constraints.maxHeight < 720 ? 26 : 36),
-                      _LoginCard(
+                      LoginCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -94,9 +97,9 @@ class _StudentInfoScreenState extends State<StudentInfoScreen> {
                                   ),
                             ),
                             const SizedBox(height: 18),
-                            const _SubtitleDivider(text: 'Öğrenci girişi'),
+                            const SubtitleDivider(text: 'Öğrenci girişi'),
                             const SizedBox(height: 28),
-                            _Field(
+                            LoginField(
                               controller: _numberController,
                               label: 'Öğrenci Numarası',
                               icon: Icons.person_outline_rounded,
@@ -105,7 +108,7 @@ class _StudentInfoScreenState extends State<StudentInfoScreen> {
                               enabled: !_submitting && !_isLockedOut,
                             ),
                             const SizedBox(height: 14),
-                            _Field(
+                            LoginField(
                               controller: _passwordController,
                               label: 'Şifre',
                               icon: Icons.lock_outline_rounded,
@@ -329,107 +332,6 @@ class _LockoutNotice extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _LoginCard extends StatelessWidget {
-  const _LoginCard({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      constraints: const BoxConstraints(maxWidth: 520),
-      padding: const EdgeInsets.fromLTRB(22, 30, 22, 26),
-      decoration: BoxDecoration(
-        color: AppColors.cardOf(context),
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.lineOf(context)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.textOf(
-              context,
-            ).withValues(alpha: AppColors.isDark(context) ? 0.16 : 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
-}
-
-class _SubtitleDivider extends StatelessWidget {
-  const _SubtitleDivider({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(child: Divider(color: AppColors.lineOf(context))),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Text(
-            text,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: AppColors.mutedOf(context),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        Expanded(child: Divider(color: AppColors.lineOf(context))),
-      ],
-    );
-  }
-}
-
-class _Field extends StatelessWidget {
-  const _Field({
-    required this.controller,
-    required this.label,
-    required this.icon,
-    this.validator,
-    this.keyboardType,
-    this.obscureText = false,
-    this.textInputAction = TextInputAction.next,
-    this.enabled = true,
-    this.suffixIcon,
-    this.onFieldSubmitted,
-  });
-
-  final TextEditingController controller;
-  final String label;
-  final IconData icon;
-  final String? Function(String?)? validator;
-  final TextInputType? keyboardType;
-  final bool obscureText;
-  final TextInputAction textInputAction;
-  final bool enabled;
-  final Widget? suffixIcon;
-  final ValueChanged<String>? onFieldSubmitted;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      validator: validator,
-      keyboardType: keyboardType,
-      obscureText: obscureText,
-      textInputAction: textInputAction,
-      enabled: enabled,
-      onFieldSubmitted: onFieldSubmitted,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-        suffixIcon: suffixIcon,
-        prefixIconColor: AppColors.brandOf(context),
       ),
     );
   }
