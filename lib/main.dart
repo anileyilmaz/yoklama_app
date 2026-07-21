@@ -6,8 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models/auth_session.dart';
+import 'models/staff_auth_session.dart';
+import 'models/staff_user.dart';
 import 'models/student.dart';
+import 'screens/role_select_screen.dart';
+import 'screens/staff_login_screen.dart';
 import 'screens/student_info_screen.dart';
+import 'screens/teacher_home_shell.dart';
 import 'screens/home_shell.dart';
 import 'screens/welcome_screen.dart';
 import 'services/api_config.dart';
@@ -82,7 +87,7 @@ class _AttendanceAppState extends State<AttendanceApp> {
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: _darkMode ? ThemeMode.dark : ThemeMode.light,
-      home: StudentGate(
+      home: AppGate(
         darkMode: _darkMode,
         themeLoaded: _themeLoaded,
         onDarkModeChanged: _setDarkMode,
@@ -92,8 +97,10 @@ class _AttendanceAppState extends State<AttendanceApp> {
   }
 }
 
-class StudentGate extends StatefulWidget {
-  const StudentGate({
+enum _EntryScreen { welcome, roleSelect, studentLogin, staffLogin }
+
+class AppGate extends StatefulWidget {
+  const AppGate({
     super.key,
     required this.darkMode,
     required this.themeLoaded,
@@ -107,43 +114,76 @@ class StudentGate extends StatefulWidget {
   final AuthTokenStore tokenStore;
 
   @override
-  State<StudentGate> createState() => _StudentGateState();
+  State<AppGate> createState() => _AppGateState();
 }
 
-class _StudentGateState extends State<StudentGate> {
+class _AppGateState extends State<AppGate> {
   static const _studentKey = 'student';
+  static const _roleKey = 'role';
+  static const _staffUserKey = 'staffUser';
 
   Student? _student;
+  StaffUser? _staffUser;
   bool _loading = true;
-  bool _showInfoForm = false;
+  _EntryScreen _entryScreen = _EntryScreen.welcome;
 
   @override
   void initState() {
     super.initState();
-    _loadStudent();
+    _loadSession();
   }
 
-  Future<void> _loadStudent() async {
+  Future<void> _loadSession() async {
     final prefs = await SharedPreferences.getInstance();
-    final student = Student.fromJson(prefs.getString(_studentKey));
     final token = await widget.tokenStore.readToken();
+    final role = prefs.getString(_roleKey);
 
-    if (student == null || token == null || token.isEmpty) {
-      await prefs.remove(_studentKey);
-      await widget.tokenStore.clearToken();
+    if (token == null || token.isEmpty) {
+      await _clearAll(prefs);
+      setState(() => _loading = false);
+      return;
     }
 
+    if (role == 'teacher') {
+      final staffUser = StaffUser.fromJson(prefs.getString(_staffUserKey));
+      if (staffUser == null) {
+        await _clearAll(prefs);
+        setState(() => _loading = false);
+        return;
+      }
+      setState(() {
+        _staffUser = staffUser;
+        _loading = false;
+      });
+      return;
+    }
+
+    // role == 'student' veya eski kurulumlarda role hiç yazılmamış (geriye
+    // dönük uyumluluk) — ikisinde de öğrenci verisi kontrol edilir.
+    final student = Student.fromJson(prefs.getString(_studentKey));
+    if (student == null) {
+      await _clearAll(prefs);
+      setState(() => _loading = false);
+      return;
+    }
     setState(() {
-      _student = student != null && token != null && token.isNotEmpty
-          ? student
-          : null;
+      _student = student;
       _loading = false;
     });
+  }
+
+  Future<void> _clearAll(SharedPreferences prefs) async {
+    await prefs.remove(_studentKey);
+    await prefs.remove(_staffUserKey);
+    await prefs.remove(_roleKey);
+    await widget.tokenStore.clearToken();
   }
 
   Future<void> _saveStudent(AuthSession session, bool rememberMe) async {
     final prefs = await SharedPreferences.getInstance();
     await widget.tokenStore.saveToken(session.token);
+    await prefs.setString(_roleKey, 'student');
+    await prefs.remove(_staffUserKey);
     if (rememberMe) {
       await prefs.setString(_studentKey, jsonEncode(session.student.toJson()));
     } else {
@@ -152,13 +192,25 @@ class _StudentGateState extends State<StudentGate> {
     setState(() => _student = session.student);
   }
 
-  Future<void> _clearStudent() async {
+  Future<void> _saveStaff(StaffAuthSession session) async {
     final prefs = await SharedPreferences.getInstance();
+    await widget.tokenStore.saveToken(session.token);
+    await prefs.setString(_roleKey, 'teacher');
+    await prefs.setString(
+      _staffUserKey,
+      jsonEncode(session.staffUser.toJson()),
+    );
     await prefs.remove(_studentKey);
-    await widget.tokenStore.clearToken();
+    setState(() => _staffUser = session.staffUser);
+  }
+
+  Future<void> _logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await _clearAll(prefs);
     setState(() {
       _student = null;
-      _showInfoForm = true;
+      _staffUser = null;
+      _entryScreen = _EntryScreen.roleSelect;
     });
   }
 
@@ -171,18 +223,41 @@ class _StudentGateState extends State<StudentGate> {
     final student = _student;
     if (student != null) {
       return HomeShell(
-        key: ValueKey(student.number),
+        key: ValueKey('student-${student.number}'),
         student: student,
-        onLogout: _clearStudent,
+        onLogout: _logout,
         darkMode: widget.darkMode,
         onDarkModeChanged: widget.onDarkModeChanged,
       );
     }
 
-    if (_showInfoForm) {
-      return StudentInfoScreen(onSaved: _saveStudent);
+    final staffUser = _staffUser;
+    if (staffUser != null) {
+      return TeacherHomeShell(
+        key: ValueKey('teacher-${staffUser.username}'),
+        staffUser: staffUser,
+        onLogout: _logout,
+        darkMode: widget.darkMode,
+        onDarkModeChanged: widget.onDarkModeChanged,
+      );
     }
 
-    return WelcomeScreen(onStart: () => setState(() => _showInfoForm = true));
+    switch (_entryScreen) {
+      case _EntryScreen.welcome:
+        return WelcomeScreen(
+          onStart: () => setState(() => _entryScreen = _EntryScreen.roleSelect),
+        );
+      case _EntryScreen.roleSelect:
+        return RoleSelectScreen(
+          onSelectStudent: () =>
+              setState(() => _entryScreen = _EntryScreen.studentLogin),
+          onSelectStaff: () =>
+              setState(() => _entryScreen = _EntryScreen.staffLogin),
+        );
+      case _EntryScreen.studentLogin:
+        return StudentInfoScreen(onSaved: _saveStudent);
+      case _EntryScreen.staffLogin:
+        return StaffLoginScreen(onSaved: _saveStaff);
+    }
   }
 }
