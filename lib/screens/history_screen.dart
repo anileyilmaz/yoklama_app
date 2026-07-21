@@ -59,40 +59,45 @@ class _HistoryScreenState extends State<HistoryScreen> {
               },
             ).toList();
 
-            return RefreshIndicator(
-              onRefresh: () async => widget.onRefresh(),
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
-                children: [
-                  SegmentedButton<int>(
-                    showSelectedIcon: false,
-                    segments: const [
-                      ButtonSegment(value: 0, label: Text('Tümü')),
-                      ButtonSegment(value: 1, label: Text('Katıldım')),
-                      ButtonSegment(value: 2, label: Text('Katılmadım')),
-                    ],
-                    selected: {_filter},
-                    onSelectionChanged: (value) =>
-                        setState(() => _filter = value.first),
-                  ),
-                  const SizedBox(height: 16),
-                  // Filtre değiştikçe (_filter) kayıt sayısı, historyFuture'ın kendisi
-                  // değişmeden değişir — bu listeyi doğrudan ListView'ın children'ına
-                  // koymak, Flutter'ın sliver child reconciliation'ında çökmeye yol
-                  // açıyordu (bkz. dashboard'daki aynı düzeltme notu). Tek bir Column
-                  // içine alarak ListView'ın kendi eleman sayısını sabit tutuyoruz.
-                  if (records.isEmpty)
-                    const _EmptyHistory()
-                  else
-                    Column(
-                      children: [
-                        for (final record in records) ...[
-                          AttendanceRecordTile(record: record),
-                          const SizedBox(height: 12),
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: RefreshIndicator(
+                  onRefresh: () async => widget.onRefresh(),
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
+                    children: [
+                      SegmentedButton<int>(
+                        showSelectedIcon: false,
+                        segments: const [
+                          ButtonSegment(value: 0, label: Text('Tümü')),
+                          ButtonSegment(value: 1, label: Text('Katıldım')),
+                          ButtonSegment(value: 2, label: Text('Katılmadım')),
                         ],
-                      ],
-                    ),
-                ],
+                        selected: {_filter},
+                        onSelectionChanged: (value) =>
+                            setState(() => _filter = value.first),
+                      ),
+                      const SizedBox(height: 16),
+                      // Filtre değiştikçe (_filter) kayıt sayısı, historyFuture'ın kendisi
+                      // değişmeden değişir — bu listeyi doğrudan ListView'ın children'ına
+                      // koymak, Flutter'ın sliver child reconciliation'ında çökmeye yol
+                      // açıyordu (bkz. dashboard'daki aynı düzeltme notu). Tek bir Column
+                      // içine alarak ListView'ın kendi eleman sayısını sabit tutuyoruz.
+                      if (records.isEmpty)
+                        const _EmptyHistory()
+                      else
+                        Column(
+                          children: [
+                            for (final record in records) ...[
+                              AttendanceRecordTile(record: record),
+                              const SizedBox(height: 12),
+                            ],
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
               ),
             );
           },

@@ -41,40 +41,45 @@ class CoursesScreen extends StatelessWidget {
             final courses = snapshot.data ?? const <CourseProgress>[];
             final atRiskCount = courses.where((c) => c.atRisk).length;
 
-            return RefreshIndicator(
-              onRefresh: () async => onRefresh(),
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
-                children: [
-                  atRiskCount > 0
-                      ? Padding(
-                          padding: const EdgeInsets.only(bottom: 14),
-                          child: _RiskSummaryBanner(count: atRiskCount),
-                        )
-                      : const SizedBox.shrink(),
-                  if (courses.isEmpty)
-                    const _EmptyCourses()
-                  else
-                    Column(
-                      children: [
-                        for (final course in courses) ...[
-                          _CourseTile(
-                            course: course,
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => CourseSessionsScreen(
-                                  courseId: course.courseId,
-                                  courseName: course.course,
-                                  historyFuture: historyFuture,
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: RefreshIndicator(
+                  onRefresh: () async => onRefresh(),
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
+                    children: [
+                      atRiskCount > 0
+                          ? Padding(
+                              padding: const EdgeInsets.only(bottom: 14),
+                              child: _RiskSummaryBanner(count: atRiskCount),
+                            )
+                          : const SizedBox.shrink(),
+                      if (courses.isEmpty)
+                        const _EmptyCourses()
+                      else
+                        Column(
+                          children: [
+                            for (final course in courses) ...[
+                              _CourseTile(
+                                course: course,
+                                onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => CourseSessionsScreen(
+                                      courseId: course.courseId,
+                                      courseName: course.course,
+                                      historyFuture: historyFuture,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-                      ],
-                    ),
-                ],
+                              const SizedBox(height: 12),
+                            ],
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
               ),
             );
           },
@@ -205,21 +210,17 @@ class _CourseTile extends StatelessWidget {
                       if (hasSessions)
                         Text(
                           '%$percent',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.titleMedium?.copyWith(
-                            color: progressColor,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: progressColor,
+                                fontWeight: FontWeight.w700,
+                              ),
                         )
                       else
                         Text(
                           'Oturum yok',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.mutedOf(context),
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: AppColors.mutedOf(context)),
                         ),
                     ],
                   ),

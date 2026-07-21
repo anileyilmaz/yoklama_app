@@ -50,91 +50,96 @@ class _ProfileScreenState extends State<ProfileScreen> {
           final student = snapshot.data ?? widget.student;
 
           return SafeArea(
-            child: RefreshIndicator(
-              onRefresh: () async => _reload(),
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
-                children: [
-                  if (snapshot.connectionState == ConnectionState.waiting)
-                    const LinearProgressIndicator(minHeight: 2),
-                  if (snapshot.hasError) ...[
-                    _ProfileError(
-                      message: snapshot.error.toString(),
-                      onRetry: _reload,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  CircleAvatar(
-                    radius: 48,
-                    backgroundColor: AppColors.primarySoftOf(context),
-                    child: Text(
-                      student.name.isEmpty
-                          ? '?'
-                          : student.name.characters.first,
-                      style: TextStyle(
-                        color: AppColors.brandOf(context),
-                        fontSize: 34,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    student.name,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    student.number,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.mutedOf(context),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    student.department,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.mutedOf(context),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  SoftCard(
-                    padding: EdgeInsets.zero,
-                    child: Column(
-                      children: [
-                        _ProfileRow(
-                          icon: Icons.person_outline_rounded,
-                          title: 'Bilgilerim',
-                          onTap: () => _showStudentInfo(context, student),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: RefreshIndicator(
+                  onRefresh: () async => _reload(),
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+                    children: [
+                      if (snapshot.connectionState == ConnectionState.waiting)
+                        const LinearProgressIndicator(minHeight: 2),
+                      if (snapshot.hasError) ...[
+                        _ProfileError(
+                          message: snapshot.error.toString(),
+                          onRetry: _reload,
                         ),
-                        _ProfileRow(
-                          icon: Icons.lock_outline_rounded,
-                          title: 'Şifre Değiştir',
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const ChangePasswordScreen(),
-                            ),
+                        const SizedBox(height: 16),
+                      ],
+                      CircleAvatar(
+                        radius: 48,
+                        backgroundColor: AppColors.primarySoftOf(context),
+                        child: Text(
+                          student.name.isEmpty
+                              ? '?'
+                              : student.name.characters.first,
+                          style: TextStyle(
+                            color: AppColors.brandOf(context),
+                            fontSize: 34,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
-                        _ThemeSwitchRow(
-                          enabled: widget.darkMode,
-                          onChanged: widget.onDarkModeChanged,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        student.name,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        student.number,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.mutedOf(context),
                         ),
-                        const _SwitchRow(),
-                        _ProfileRow(
-                          icon: Icons.logout_rounded,
-                          title: 'Çıkış Yap',
-                          danger: true,
-                          onTap: widget.onLogout,
-                          showLine: false,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        student.department,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.mutedOf(context),
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 32),
+                      SoftCard(
+                        padding: EdgeInsets.zero,
+                        child: Column(
+                          children: [
+                            _ProfileRow(
+                              icon: Icons.person_outline_rounded,
+                              title: 'Bilgilerim',
+                              onTap: () => _showStudentInfo(context, student),
+                            ),
+                            _ProfileRow(
+                              icon: Icons.lock_outline_rounded,
+                              title: 'Şifre Değiştir',
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const ChangePasswordScreen(),
+                                ),
+                              ),
+                            ),
+                            _ThemeSwitchRow(
+                              enabled: widget.darkMode,
+                              onChanged: widget.onDarkModeChanged,
+                            ),
+                            const _SwitchRow(),
+                            _ProfileRow(
+                              icon: Icons.logout_rounded,
+                              title: 'Çıkış Yap',
+                              danger: true,
+                              onTap: widget.onLogout,
+                              showLine: false,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           );

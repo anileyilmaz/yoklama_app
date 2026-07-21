@@ -67,14 +67,19 @@ class CourseSessionsScreen extends StatelessWidget {
               );
             }
 
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
-              children: [
-                for (final record in records) ...[
-                  AttendanceRecordTile(record: record, showLesson: false),
-                  const SizedBox(height: 12),
-                ],
-              ],
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
+                  children: [
+                    for (final record in records) ...[
+                      AttendanceRecordTile(record: record, showLesson: false),
+                      const SizedBox(height: 12),
+                    ],
+                  ],
+                ),
+              ),
             );
           },
         ),
