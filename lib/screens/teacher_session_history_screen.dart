@@ -114,7 +114,7 @@ class TeacherSessionHistoryScreen extends StatelessWidget {
   }
 }
 
-class _SessionAttendanceScreen extends StatelessWidget {
+class _SessionAttendanceScreen extends StatefulWidget {
   const _SessionAttendanceScreen({
     required this.sessionId,
     required this.courseName,
@@ -124,12 +124,27 @@ class _SessionAttendanceScreen extends StatelessWidget {
   final String courseName;
 
   @override
+  State<_SessionAttendanceScreen> createState() =>
+      _SessionAttendanceScreenState();
+}
+
+class _SessionAttendanceScreenState extends State<_SessionAttendanceScreen> {
+  final _sessionService = const TeacherSessionService();
+  late Future<List<LiveAttendanceEntry>> _attendanceFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _attendanceFuture = _sessionService.fetchAttendance(widget.sessionId);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(courseName)),
+      appBar: AppBar(title: Text(widget.courseName)),
       body: SafeArea(
         child: FutureBuilder<List<LiveAttendanceEntry>>(
-          future: const TeacherSessionService().fetchAttendance(sessionId),
+          future: _attendanceFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
