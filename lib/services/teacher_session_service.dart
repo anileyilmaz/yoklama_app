@@ -156,6 +156,37 @@ class TeacherSessionService {
         .toList();
   }
 
+  Future<void> addManualAttendance(int sessionId, String studentNumber) async {
+    final token = await _requireToken();
+    final client = _client ?? http.Client();
+    final response = await client
+        .post(
+          Uri.parse('${ApiConfig.staffBaseUrl}/sessions/$sessionId/manual'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({'studentNumber': studentNumber}),
+        )
+        .timeout(const Duration(seconds: 12))
+        .onError<SocketException>((error, stackTrace) {
+          throw const TeacherSessionException('Sunucuya ulaşılamıyor');
+        })
+        .onError<TimeoutException>((error, stackTrace) {
+          throw const TeacherSessionException('Sunucuya ulaşılamıyor');
+        })
+        .onError<http.ClientException>((error, stackTrace) {
+          throw const TeacherSessionException('Sunucuya ulaşılamıyor');
+        });
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final body = _decodeBody(response.body);
+      throw TeacherSessionException(
+        body['error'] as String? ?? 'Öğrenci eklenemedi.',
+      );
+    }
+  }
+
   Future<void> endSession(int sessionId) async {
     final token = await _requireToken();
     final client = _client ?? http.Client();

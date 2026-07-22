@@ -10,6 +10,7 @@ void main() {
     String? qrPayload,
     List<LiveAttendanceEntry> attendees = const [],
     List<EnrollRequest> pendingRequests = const [],
+    Future<void> Function(String studentNumber)? onAddManual,
   }) {
     return MaterialApp(
       home: LiveSessionBody(
@@ -20,6 +21,7 @@ void main() {
         onApprove: (_) {},
         onReject: (_) {},
         onEnd: () {},
+        onAddManual: onAddManual ?? (_) async {},
       ),
     );
   }
@@ -73,4 +75,63 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'tapping öğrenci ekle opens a dialog and submits the entered number',
+    (tester) async {
+      String? submittedNumber;
+      await tester.pumpWidget(
+        buildBody(
+          onAddManual: (studentNumber) async {
+            submittedNumber = studentNumber;
+          },
+        ),
+      );
+
+      // pumpAndSettle burada kullanılmıyor: dialog'daki TextField autofocus
+      // olduğundan yanıp sönen imleç animasyonu sonsuza dek tekrarlanıyor,
+      // pumpAndSettle bu yüzden hiç "durulmuyor" ve timeout'a düşüyor —
+      // bilinen bir Flutter test tuzağı, bunun yerine sabit pump'lar kullanılır.
+      await tester.tap(find.byTooltip('Öğrenci ekle'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Öğrenci Numarası'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), '210101234');
+      await tester.tap(find.text('Ekle'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(submittedNumber, '210101234');
+      expect(find.text('Öğrenci ekle'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'shows an inline error and keeps the dialog open when onAddManual throws',
+    (tester) async {
+      await tester.pumpWidget(
+        buildBody(
+          onAddManual: (_) async {
+            throw Exception('Bu numarayla kayıtlı öğrenci bulunamadı.');
+          },
+        ),
+      );
+
+      await tester.tap(find.byTooltip('Öğrenci ekle'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.enterText(find.byType(TextField), '999999');
+      await tester.tap(find.text('Ekle'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(
+        find.textContaining('Bu numarayla kayıtlı öğrenci bulunamadı'),
+        findsOneWidget,
+      );
+      expect(find.byType(TextField), findsOneWidget);
+    },
+  );
 }

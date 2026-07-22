@@ -104,6 +104,20 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
     if (mounted) Navigator.of(context).pop();
   }
 
+  // Yeni öğrenciyi burada listeye eklemiyoruz — backend başarılı elle ekleme
+  // sonrası aynı "attendance" socket event'ini yayınlıyor (bkz.
+  // TeacherLiveSessionSocket.onAttendance), o event zaten mevcut canlı listeye
+  // ekliyor. Dialog, hata durumunda bu Future'ın attığı exception'ı yakalayıp
+  // kendi içinde gösteriyor (bkz. LiveSessionBody'deki _AddManualDialog).
+  Future<void> _addManual(String studentNumber) async {
+    await _sessionService.addManualAttendance(widget.sessionId, studentNumber);
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Öğrenci eklendi.')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_ended) {
@@ -119,6 +133,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
       onApprove: _approve,
       onReject: _reject,
       onEnd: _end,
+      onAddManual: _addManual,
     );
   }
 }
@@ -137,6 +152,7 @@ class LiveSessionBody extends StatelessWidget {
     required this.onApprove,
     required this.onReject,
     required this.onEnd,
+    required this.onAddManual,
   });
 
   final String courseName;
@@ -146,6 +162,7 @@ class LiveSessionBody extends StatelessWidget {
   final ValueChanged<EnrollRequest> onApprove;
   final ValueChanged<EnrollRequest> onReject;
   final VoidCallback onEnd;
+  final Future<void> Function(String studentNumber) onAddManual;
 
   @override
   Widget build(BuildContext context) {
@@ -153,6 +170,14 @@ class LiveSessionBody extends StatelessWidget {
       appBar: AppBar(
         title: Text(courseName),
         actions: [
+          IconButton(
+            tooltip: 'Öğrenci ekle',
+            icon: const Icon(Icons.person_add_alt_1_rounded),
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (_) => _AddManualDialog(onAddManual: onAddManual),
+            ),
+          ),
           TextButton(
             onPressed: onEnd,
             child: const Text('Oturumu bitir'),
@@ -257,6 +282,90 @@ class LiveSessionBody extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AddManualDialog extends StatefulWidget {
+  const _AddManualDialog({required this.onAddManual});
+
+  final Future<void> Function(String studentNumber) onAddManual;
+
+  @override
+  State<_AddManualDialog> createState() => _AddManualDialogState();
+}
+
+class _AddManualDialogState extends State<_AddManualDialog> {
+  final _controller = TextEditingController();
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final studentNumber = _controller.text.trim();
+    if (studentNumber.isEmpty) {
+      setState(() => _error = 'Öğrenci numarası zorunlu');
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      await widget.onAddManual(studentNumber);
+      if (mounted) Navigator.of(context).pop();
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = '$error';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Öğrenci ekle'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            enabled: !_submitting,
+            decoration: const InputDecoration(labelText: 'Öğrenci Numarası'),
+            onSubmitted: (_) => _submit(),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 8),
+            Text(_error!, style: const TextStyle(color: AppColors.danger)),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.of(context).pop(),
+          child: const Text('Vazgeç'),
+        ),
+        FilledButton(
+          onPressed: _submitting ? null : _submit,
+          child: _submitting
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Ekle'),
+        ),
+      ],
     );
   }
 }
