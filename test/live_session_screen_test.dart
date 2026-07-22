@@ -134,4 +134,100 @@ void main() {
       expect(find.byType(TextField), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'attempting to leave via the back button shows a confirmation and ends the session if confirmed',
+    (tester) async {
+      var endCalled = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => LiveSessionBody(
+                    courseName: 'Veri Yapıları',
+                    qrPayload: null,
+                    attendees: const [],
+                    pendingRequests: const [],
+                    onApprove: (_) {},
+                    onReject: (_) {},
+                    onEnd: () => endCalled = true,
+                    onAddManual: (_) async {},
+                  ),
+                ),
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('open'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.pageBack();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Geri tuşu oturumu doğrudan kapatmamalı — hâlâ canlı oturum ekranındayız.
+      expect(find.text('Veri Yapıları'), findsOneWidget);
+      expect(find.textContaining('sona erecek'), findsOneWidget);
+      expect(endCalled, isFalse);
+
+      await tester.tap(find.text('Bitir ve çık'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(endCalled, isTrue);
+    },
+  );
+
+  testWidgets(
+    'cancelling the leave confirmation keeps the session screen open',
+    (tester) async {
+      var endCalled = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => LiveSessionBody(
+                    courseName: 'Veri Yapıları',
+                    qrPayload: null,
+                    attendees: const [],
+                    pendingRequests: const [],
+                    onApprove: (_) {},
+                    onReject: (_) {},
+                    onEnd: () => endCalled = true,
+                    onAddManual: (_) async {},
+                  ),
+                ),
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('open'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.pageBack();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.tap(find.text('Vazgeç'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(endCalled, isFalse);
+      expect(find.text('Veri Yapıları'), findsOneWidget);
+    },
+  );
 }

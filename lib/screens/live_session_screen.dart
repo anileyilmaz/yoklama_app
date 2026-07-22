@@ -32,6 +32,13 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
   final List<LiveAttendanceEntry> _attendees = [];
   final List<EnrollRequest> _pendingRequests = [];
   bool _ended = false;
+  // Oturumu bitirmek hem HTTP çağrısı başarılı olunca doğrudan hem de backend'in
+  // yayınladığı "sessionEnded" socket event'i (hocanın kendi soketi de oturumun
+  // odasında olduğundan bunu kendisi de alıyor) üzerinden ayrı ayrı pop tetikliyordu
+  // — ikisi network zamanlamasına göre yarışıp aynı ekranı iki kez pop'layabiliyor,
+  // ikinci pop de altındaki TeacherHomeShell'i (kök ekranı) popluyordu. Bu bayrak
+  // ikisinden hangisi önce gelirse gelsin pop'un yalnızca bir kez olmasını garantiler.
+  bool _navigatedAway = false;
 
   @override
   void initState() {
@@ -101,7 +108,13 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
       ).showSnackBar(SnackBar(content: Text('$error')));
       return;
     }
-    if (mounted) Navigator.of(context).pop();
+    _popOnce();
+  }
+
+  void _popOnce() {
+    if (_navigatedAway || !mounted) return;
+    _navigatedAway = true;
+    Navigator.of(context).pop();
   }
 
   // Yeni öğrenciyi burada listeye eklemiyoruz — backend başarılı elle ekleme
@@ -121,9 +134,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
   @override
   Widget build(BuildContext context) {
     if (_ended) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) Navigator.of(context).pop();
-      });
+      WidgetsBinding.instance.addPostFrameCallback((_) => _popOnce());
     }
     return LiveSessionBody(
       courseName: widget.courseName,
@@ -166,47 +177,115 @@ class LiveSessionBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(courseName),
-        actions: [
-          IconButton(
-            tooltip: 'Öğrenci ekle',
-            icon: const Icon(Icons.person_add_alt_1_rounded),
-            onPressed: () => showDialog<void>(
-              context: context,
-              builder: (_) => _AddManualDialog(onAddManual: onAddManual),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldEnd = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Oturum hâlâ açık'),
+            content: const Text(
+              'Bu ekrandan çıkarsan yoklama otomatik olarak sona erecek. '
+              'Devam etmek istiyor musun?',
             ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Vazgeç'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Bitir ve çık'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: onEnd,
-            child: const Text('Oturumu bitir'),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(18),
-          children: [
-            Center(
-              child: SoftCard(
-                child: qrPayload == null
-                    ? const SizedBox(
-                        width: 220,
-                        height: 220,
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    : QrImageView(data: qrPayload!, size: 220),
+        );
+        if (shouldEnd == true) onEnd();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(courseName),
+          actions: [
+            IconButton(
+              tooltip: 'Öğrenci ekle',
+              icon: const Icon(Icons.person_add_alt_1_rounded),
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => _AddManualDialog(onAddManual: onAddManual),
               ),
             ),
-            const SizedBox(height: 20),
-            if (pendingRequests.isNotEmpty) ...[
+            TextButton(onPressed: onEnd, child: const Text('Oturumu bitir')),
+          ],
+        ),
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(18),
+            children: [
+              Center(
+                child: SoftCard(
+                  child: qrPayload == null
+                      ? const SizedBox(
+                          width: 220,
+                          height: 220,
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      : QrImageView(data: qrPayload!, size: 220),
+                ),
+              ),
+              const SizedBox(height: 20),
+              if (pendingRequests.isNotEmpty) ...[
+                Text(
+                  'Onay bekleyen istekler',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 10),
+                for (final request in pendingRequests) ...[
+                  SoftCard(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(request.name),
+                              Text(
+                                request.studentNumber,
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: AppColors.mutedOf(context),
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.check_circle_outline_rounded,
+                            color: AppColors.primary,
+                          ),
+                          onPressed: () => onApprove(request),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.cancel_outlined,
+                            color: AppColors.danger,
+                          ),
+                          onPressed: () => onReject(request),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                const SizedBox(height: 10),
+              ],
               Text(
-                'Onay bekleyen istekler',
+                'Katılımlar (${attendees.length})',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 10),
-              for (final request in pendingRequests) ...[
+              for (final entry in attendees) ...[
                 SoftCard(
                   child: Row(
                     children: [
@@ -214,72 +293,28 @@ class LiveSessionBody extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(request.name),
+                            Text(entry.name),
                             Text(
-                              request.studentNumber,
+                              entry.studentNumber,
                               style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: AppColors.mutedOf(context),
-                                  ),
+                                  ?.copyWith(color: AppColors.mutedOf(context)),
                             ),
                           ],
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.check_circle_outline_rounded,
-                          color: AppColors.primary,
+                      Text(
+                        entry.createdAt,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.mutedOf(context),
                         ),
-                        onPressed: () => onApprove(request),
-                      ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.cancel_outlined,
-                          color: AppColors.danger,
-                        ),
-                        onPressed: () => onReject(request),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
               ],
-              const SizedBox(height: 10),
             ],
-            Text(
-              'Katılımlar (${attendees.length})',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 10),
-            for (final entry in attendees) ...[
-              SoftCard(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(entry.name),
-                          Text(
-                            entry.studentNumber,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: AppColors.mutedOf(context)),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      entry.createdAt,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.mutedOf(context),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ],
+          ),
         ),
       ),
     );
