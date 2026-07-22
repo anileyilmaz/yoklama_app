@@ -12,9 +12,14 @@ import '../widgets/subtitle_divider.dart';
 typedef StaffLoginCallback = Future<void> Function(StaffAuthSession session);
 
 class StaffLoginScreen extends StatefulWidget {
-  const StaffLoginScreen({super.key, required this.onSaved});
+  const StaffLoginScreen({
+    super.key,
+    required this.onSaved,
+    this.authService = const StaffAuthService(),
+  });
 
   final StaffLoginCallback onSaved;
+  final StaffAuthService authService;
 
   @override
   State<StaffLoginScreen> createState() => _StaffLoginScreenState();
@@ -22,7 +27,6 @@ class StaffLoginScreen extends StatefulWidget {
 
 class _StaffLoginScreenState extends State<StaffLoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _authService = const StaffAuthService();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
@@ -46,7 +50,7 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
     setState(() => _submitting = true);
 
     try {
-      final session = await _authService.login(
+      final session = await widget.authService.login(
         username: _usernameController.text,
         password: _passwordController.text,
       );

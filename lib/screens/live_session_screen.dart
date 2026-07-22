@@ -71,6 +71,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
       await _enrollRequestService.approve(widget.sessionId, request.id);
     } on Object catch (error) {
       if (!mounted) return;
+      setState(() => _pendingRequests.add(request));
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('$error')));
@@ -83,6 +84,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> {
       await _enrollRequestService.reject(widget.sessionId, request.id);
     } on Object catch (error) {
       if (!mounted) return;
+      setState(() => _pendingRequests.add(request));
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('$error')));
