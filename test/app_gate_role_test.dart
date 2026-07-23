@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:yoklama_app/main.dart';
 import 'package:yoklama_app/services/auth_token_store.dart';
+import 'package:yoklama_app/services/unified_login_service.dart';
 
 void main() {
   setUp(() {
@@ -29,7 +30,7 @@ void main() {
     expect(find.text('Derslerim'), findsWidgets); // ama TeacherHomeShell açıldı
   });
 
-  testWidgets('shows RoleSelectScreen after tapping Başlayalım', (
+  testWidgets('shows the unified LoginScreen after tapping Başlayalım', (
     tester,
   ) async {
     await tester.pumpWidget(AttendanceApp(tokenStore: _FakeAuthTokenStore()));
@@ -38,8 +39,8 @@ void main() {
     await tester.tap(find.text('Başlayalım'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Öğrenci'), findsOneWidget);
-    expect(find.text('Hoca ve Yönetici'), findsOneWidget);
+    expect(find.text('Kullanıcı adınız'), findsOneWidget);
+    expect(find.text(kStudentLoginDomain), findsOneWidget);
   });
 }
 

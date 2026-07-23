@@ -9,9 +9,8 @@ import 'models/auth_session.dart';
 import 'models/staff_auth_session.dart';
 import 'models/staff_user.dart';
 import 'models/student.dart';
-import 'screens/role_select_screen.dart';
-import 'screens/staff_login_screen.dart';
-import 'screens/student_info_screen.dart';
+import 'models/unified_login_result.dart';
+import 'screens/login_screen.dart';
 import 'screens/teacher_home_shell.dart';
 import 'screens/home_shell.dart';
 import 'screens/welcome_screen.dart';
@@ -97,7 +96,7 @@ class _AttendanceAppState extends State<AttendanceApp> {
   }
 }
 
-enum _EntryScreen { welcome, roleSelect, studentLogin, staffLogin }
+enum _EntryScreen { welcome, login }
 
 class AppGate extends StatefulWidget {
   const AppGate({
@@ -210,7 +209,7 @@ class _AppGateState extends State<AppGate> {
     setState(() {
       _student = null;
       _staffUser = null;
-      _entryScreen = _EntryScreen.roleSelect;
+      _entryScreen = _EntryScreen.login;
     });
   }
 
@@ -245,19 +244,16 @@ class _AppGateState extends State<AppGate> {
     switch (_entryScreen) {
       case _EntryScreen.welcome:
         return WelcomeScreen(
-          onStart: () => setState(() => _entryScreen = _EntryScreen.roleSelect),
+          onStart: () => setState(() => _entryScreen = _EntryScreen.login),
         );
-      case _EntryScreen.roleSelect:
-        return RoleSelectScreen(
-          onSelectStudent: () =>
-              setState(() => _entryScreen = _EntryScreen.studentLogin),
-          onSelectStaff: () =>
-              setState(() => _entryScreen = _EntryScreen.staffLogin),
+      case _EntryScreen.login:
+        return LoginScreen(
+          onSaved: (result, rememberMe) => switch (result) {
+            StudentLoginResult(:final session) =>
+              _saveStudent(session, rememberMe),
+            StaffLoginResult(:final session) => _saveStaff(session),
+          },
         );
-      case _EntryScreen.studentLogin:
-        return StudentInfoScreen(onSaved: _saveStudent);
-      case _EntryScreen.staffLogin:
-        return StaffLoginScreen(onSaved: _saveStaff);
     }
   }
 }
