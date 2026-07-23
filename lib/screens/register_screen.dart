@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../models/department.dart';
 import '../models/faculty.dart';
 import '../services/register_service.dart';
+import '../services/unified_login_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/domain_suffix_field.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/soft_card.dart';
 
@@ -13,7 +15,12 @@ import '../widgets/soft_card.dart';
 const _manualDepartmentSentinel = '__manual__';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  const RegisterScreen({
+    super.key,
+    this.registerService = const RegisterService(),
+  });
+
+  final RegisterService registerService;
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -21,7 +28,6 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _registerService = const RegisterService();
   final _nameController = TextEditingController();
   final _numberController = TextEditingController();
   final _departmentController = TextEditingController();
@@ -57,7 +63,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _facultiesError = null;
     });
     try {
-      final faculties = await _registerService.fetchFaculties();
+      final faculties = await widget.registerService.fetchFaculties();
       if (!mounted) return;
       setState(() => _faculties = faculties);
     } on RegisterException catch (error) {
@@ -86,7 +92,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _departmentsError = null;
     });
     try {
-      final departments = await _registerService.fetchDepartments(facultyId);
+      final departments = await widget.registerService.fetchDepartments(facultyId);
       if (!mounted) return;
       setState(() => _departments = departments);
     } on RegisterException catch (error) {
@@ -163,17 +169,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         validator: _required,
                       ),
                       const SizedBox(height: 14),
-                      TextFormField(
-                        controller: _numberController,
-                        enabled: !_submitting,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Öğrenci Numarası',
-                          prefixIcon: Icon(Icons.person_outline_rounded),
-                          suffixText: '@ogrenci.ege.edu.tr',
-                          suffixStyle: TextStyle(fontSize: 13),
-                        ),
-                        validator: _required,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 6,
+                            child: TextFormField(
+                              controller: _numberController,
+                              enabled: !_submitting,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Öğrenci Numarası',
+                                prefixIcon: Icon(Icons.person_outline_rounded),
+                              ),
+                              validator: _required,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 5,
+                            child: DomainSuffixField(
+                              value: kStudentLoginDomain,
+                              options: const [kStudentLoginDomain],
+                              enabled: !_submitting,
+                              onChanged: null,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 14),
                       _buildFacultyField(),
@@ -455,7 +477,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _submitting = true);
 
     try {
-      await _registerService.register(
+      await widget.registerService.register(
         name: _nameController.text,
         studentNumber: _numberController.text,
         department: _manualDepartmentEntry
