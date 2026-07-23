@@ -56,7 +56,7 @@ class UnifiedLoginService {
           body: jsonEncode({
             'identifier': identifier,
             'password': rawPassword,
-            if (deviceId != null) 'deviceId': deviceId,
+            'deviceId': ?deviceId,
           }),
         )
         .timeout(const Duration(seconds: 12))

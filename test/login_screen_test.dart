@@ -27,7 +27,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(home: LoginScreen(onSaved: (_, __) async {})),
+      MaterialApp(home: LoginScreen(onSaved: (_, _) async {})),
     );
 
     expect(find.text('Kullanıcı adınız'), findsOneWidget);
@@ -40,7 +40,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(home: LoginScreen(onSaved: (_, __) async {})),
+      MaterialApp(home: LoginScreen(onSaved: (_, _) async {})),
     );
 
     await tester.tap(find.byType(DropdownButton<String>));
@@ -165,7 +165,7 @@ void main() {
         MaterialApp(
           home: LoginScreen(
             loginService: service,
-            onSaved: (_, __) async => onSavedCalled = true,
+            onSaved: (_, _) async => onSavedCalled = true,
           ),
         ),
       );
@@ -217,7 +217,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: LoginScreen(loginService: service, onSaved: (_, __) async {}),
+          home: LoginScreen(loginService: service, onSaved: (_, _) async {}),
         ),
       );
 
