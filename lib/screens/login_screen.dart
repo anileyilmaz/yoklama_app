@@ -95,7 +95,6 @@ class _LoginScreenState extends State<LoginScreen> {
               content: Text('Yönetici paneli mobil uygulamada yakında.'),
             ),
           );
-          setState(() => _submitting = false);
         }
         return;
       }
@@ -126,9 +125,9 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Giriş yapılamadı: $error')));
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
-
-    if (mounted) setState(() => _submitting = false);
   }
 
   void _handleLoginFailure(UnifiedLoginException error) {
