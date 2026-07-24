@@ -210,7 +210,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           SubtitleDivider(
                             text: _isStudentMode
                                 ? 'Öğrenci girişi'
-                                : 'Hoca / Yönetici girişi',
+                                : 'Öğretim üyesi girişi',
                           ),
                           const SizedBox(height: 28),
                           Row(

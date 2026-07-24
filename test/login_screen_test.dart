@@ -50,7 +50,7 @@ void main() {
 
       expect(find.text('Beni hatırla'), findsOneWidget);
       expect(find.text('Hesabın yok mu? Kayıt ol'), findsNothing);
-      expect(find.text('Hoca / Yönetici girişi'), findsOneWidget);
+      expect(find.text('Öğretim üyesi girişi'), findsOneWidget);
     },
   );
 
