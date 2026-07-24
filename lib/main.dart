@@ -14,7 +14,6 @@ import 'models/unified_login_result.dart';
 import 'screens/login_screen.dart';
 import 'screens/teacher_home_shell.dart';
 import 'screens/home_shell.dart';
-import 'screens/welcome_screen.dart';
 import 'services/api_config.dart';
 import 'services/auth_token_store.dart';
 import 'services/session_expiry_notifier.dart';
@@ -98,8 +97,6 @@ class _AttendanceAppState extends State<AttendanceApp> {
   }
 }
 
-enum _EntryScreen { welcome, login }
-
 class AppGate extends StatefulWidget {
   const AppGate({
     super.key,
@@ -126,7 +123,6 @@ class _AppGateState extends State<AppGate> {
   Student? _student;
   StaffUser? _staffUser;
   bool _loading = true;
-  _EntryScreen _entryScreen = _EntryScreen.welcome;
   StreamSubscription<void>? _sessionExpirySubscription;
 
   @override
@@ -224,7 +220,6 @@ class _AppGateState extends State<AppGate> {
     setState(() {
       _student = null;
       _staffUser = null;
-      _entryScreen = _EntryScreen.login;
     });
   }
 
@@ -256,19 +251,12 @@ class _AppGateState extends State<AppGate> {
       );
     }
 
-    switch (_entryScreen) {
-      case _EntryScreen.welcome:
-        return WelcomeScreen(
-          onStart: () => setState(() => _entryScreen = _EntryScreen.login),
-        );
-      case _EntryScreen.login:
-        return LoginScreen(
-          onSaved: (result, rememberMe) => switch (result) {
-            StudentLoginResult(:final session) =>
-              _saveStudent(session, rememberMe),
-            StaffLoginResult(:final session) => _saveStaff(session, rememberMe),
-          },
-        );
-    }
+    return LoginScreen(
+      onSaved: (result, rememberMe) => switch (result) {
+        StudentLoginResult(:final session) =>
+          _saveStudent(session, rememberMe),
+        StaffLoginResult(:final session) => _saveStaff(session, rememberMe),
+      },
+    );
   }
 }

@@ -57,13 +57,10 @@ void main() {
     },
   );
 
-  testWidgets('shows the unified LoginScreen after tapping Başlayalım', (
+  testWidgets('shows the unified LoginScreen directly on a fresh install', (
     tester,
   ) async {
     await tester.pumpWidget(AttendanceApp(tokenStore: _FakeAuthTokenStore()));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Başlayalım'));
     await tester.pumpAndSettle();
 
     expect(find.text('Kullanıcı adınız'), findsOneWidget);

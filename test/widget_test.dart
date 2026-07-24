@@ -9,12 +9,11 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('shows welcome screen first', (WidgetTester tester) async {
+  testWidgets('shows the login screen first', (WidgetTester tester) async {
     await tester.pumpWidget(AttendanceApp(tokenStore: _FakeAuthTokenStore()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Yoklama'), findsOneWidget);
-    expect(find.text('Başlayalım'), findsOneWidget);
+    expect(find.text('Kullanıcı adınız'), findsOneWidget);
   });
 }
 
