@@ -83,7 +83,7 @@ class _HomeShellState extends State<HomeShell> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '${session.courseName} dersine katılım isteğiniz hoca tarafından reddedildi.',
+              '${session.courseName} dersine katılım isteğiniz öğretim üyesi tarafından reddedildi.',
             ),
           ),
         );

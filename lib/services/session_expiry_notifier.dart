@@ -3,7 +3,7 @@ import 'dart:async';
 /// Kimlik doğrulamalı bir API çağrısı 401 aldığında yayın yapar; `AppGate`
 /// bunu dinleyip yerel oturumu temizleyip kullanıcıyı giriş ekranına
 /// düşürür — web panellerindeki `api()` helper'ının (`if (res.status ===
-/// 401) return logout();`, bkz. admin.html/hoca.html) mobil karşılığı.
+/// 401) return logout();`, bkz. admin.html/ogretim-uyesi.html) mobil karşılığı.
 class SessionExpiryNotifier {
   SessionExpiryNotifier._();
 

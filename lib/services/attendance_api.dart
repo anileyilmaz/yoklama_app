@@ -77,7 +77,7 @@ class AttendanceApi {
     // ne başarı (henüz yoklama işlenmedi) ne hata (istek kabul edildi), ayrı ele alınır.
     if (response.statusCode == 202 && body['pending'] == true) {
       throw AttendanceException(
-        _stringValue(body['message']) ?? 'İsteğiniz hocanıza iletildi.',
+        _stringValue(body['message']) ?? 'İsteğiniz öğretim üyenize iletildi.',
         pending: true,
       );
     }
