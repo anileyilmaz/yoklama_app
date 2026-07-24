@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../models/teacher_course.dart';
 import 'api_config.dart';
 import 'auth_token_store.dart';
+import 'session_expiry_notifier.dart';
 
 class TeacherCoursesService {
   const TeacherCoursesService({
@@ -44,6 +45,9 @@ class TeacherCoursesService {
           throw const TeacherCoursesException('Sunucuya ulaşılamıyor');
         });
 
+    if (response.statusCode == 401) {
+      SessionExpiryNotifier.instance.notify();
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw const TeacherCoursesException('Ders listesi alınamadı.');
     }

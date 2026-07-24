@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../models/student.dart';
 import 'api_config.dart';
 import 'auth_token_store.dart';
+import 'session_expiry_notifier.dart';
 
 class ProfileService {
   const ProfileService({
@@ -40,6 +41,10 @@ class ProfileService {
         .onError<http.ClientException>((error, stackTrace) {
           throw const ProfileException('Sunucuya ulaşılamıyor');
         });
+
+    if (response.statusCode == 401) {
+      SessionExpiryNotifier.instance.notify();
+    }
 
     final body = _decodeBody(response.body);
 

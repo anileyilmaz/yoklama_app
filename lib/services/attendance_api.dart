@@ -9,6 +9,7 @@ import '../models/attendance_result.dart';
 import 'api_config.dart';
 import 'auth_token_store.dart';
 import 'device_id_store.dart';
+import 'session_expiry_notifier.dart';
 
 typedef _LocationSnapshot = ({double lat, double lng, bool isMocked});
 
@@ -64,6 +65,10 @@ class AttendanceApi {
         .onError<http.ClientException>((error, stackTrace) {
           throw const AttendanceException('Sunucuya ulaşılamıyor');
         });
+
+    if (response.statusCode == 401) {
+      SessionExpiryNotifier.instance.notify();
+    }
 
     final body = _decodeBody(response.body);
 

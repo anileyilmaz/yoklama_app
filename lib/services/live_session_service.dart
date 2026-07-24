@@ -8,6 +8,7 @@ import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 import '../models/active_session.dart';
 import 'api_config.dart';
 import 'auth_token_store.dart';
+import 'session_expiry_notifier.dart';
 
 /// Öğrencinin kayıtlı olduğu bir derste yoklama açıldığında/kapandığında uygulama
 /// açıkken anlık bildirim almasını sağlar. `fetchActiveSessions` uygulama ilk
@@ -30,6 +31,9 @@ class LiveSessionService {
       final response = await http
           .get(endpoint, headers: {'Authorization': 'Bearer $token'})
           .timeout(const Duration(seconds: 10));
+      if (response.statusCode == 401) {
+        SessionExpiryNotifier.instance.notify();
+      }
       if (response.statusCode < 200 || response.statusCode >= 300) return const [];
       final decoded = jsonDecode(response.body);
       if (decoded is! List) return const [];

@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../models/enroll_request.dart';
 import 'api_config.dart';
 import 'auth_token_store.dart';
+import 'session_expiry_notifier.dart';
 
 class EnrollRequestService {
   const EnrollRequestService({
@@ -40,6 +41,9 @@ class EnrollRequestService {
           throw const EnrollRequestException('Sunucuya ulaşılamıyor');
         });
 
+    if (response.statusCode == 401) {
+      SessionExpiryNotifier.instance.notify();
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw const EnrollRequestException('Onay bekleyen istekler alınamadı.');
     }
@@ -78,6 +82,9 @@ class EnrollRequestService {
           throw const EnrollRequestException('Sunucuya ulaşılamıyor');
         });
 
+    if (response.statusCode == 401) {
+      SessionExpiryNotifier.instance.notify();
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw const EnrollRequestException('İstek işlenemedi.');
     }

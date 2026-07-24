@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../models/attendance_record.dart';
 import 'api_config.dart';
 import 'auth_token_store.dart';
+import 'session_expiry_notifier.dart';
 
 class AttendanceHistoryService {
   const AttendanceHistoryService({
@@ -43,6 +44,10 @@ class AttendanceHistoryService {
         .onError<http.ClientException>((error, stackTrace) {
           throw const AttendanceHistoryException('Sunucuya ulaşılamıyor');
         });
+
+    if (response.statusCode == 401) {
+      SessionExpiryNotifier.instance.notify();
+    }
 
     final decoded = _decode(response.body);
     final body = decoded is Map<String, dynamic> ? decoded : const {};

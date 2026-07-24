@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'api_config.dart';
 import 'auth_token_store.dart';
 import 'password_changer.dart';
+import 'session_expiry_notifier.dart';
 
 class PasswordService implements PasswordChanger {
   const PasswordService({this._tokenStore = const SecureAuthTokenStore()});
@@ -52,6 +53,10 @@ class PasswordService implements PasswordChanger {
         .onError<http.ClientException>((error, stackTrace) {
           throw const PasswordException('Sunucuya ulaşılamıyor');
         });
+
+    if (response.statusCode == 401) {
+      SessionExpiryNotifier.instance.notify();
+    }
 
     final body = _decodeBody(response.body);
 

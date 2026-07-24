@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -16,6 +17,7 @@ import 'screens/home_shell.dart';
 import 'screens/welcome_screen.dart';
 import 'services/api_config.dart';
 import 'services/auth_token_store.dart';
+import 'services/session_expiry_notifier.dart';
 import 'theme/app_theme.dart';
 
 /// Geliştirme sunucusu self-signed sertifika kullanıyor (bkz. ApiConfig.baseUrl).
@@ -125,11 +127,20 @@ class _AppGateState extends State<AppGate> {
   StaffUser? _staffUser;
   bool _loading = true;
   _EntryScreen _entryScreen = _EntryScreen.welcome;
+  StreamSubscription<void>? _sessionExpirySubscription;
 
   @override
   void initState() {
     super.initState();
     _loadSession();
+    _sessionExpirySubscription = SessionExpiryNotifier.instance.onExpired
+        .listen((_) => _logout());
+  }
+
+  @override
+  void dispose() {
+    _sessionExpirySubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadSession() async {

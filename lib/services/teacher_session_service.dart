@@ -9,6 +9,7 @@ import '../models/teaching_session_detail.dart';
 import '../models/teaching_session_summary.dart';
 import 'api_config.dart';
 import 'auth_token_store.dart';
+import 'session_expiry_notifier.dart';
 
 class TeacherSessionService {
   const TeacherSessionService({
@@ -55,6 +56,9 @@ class TeacherSessionService {
           throw const TeacherSessionException('Sunucuya ulaşılamıyor');
         });
 
+    if (response.statusCode == 401) {
+      SessionExpiryNotifier.instance.notify();
+    }
     final body = _decodeBody(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw TeacherSessionException(
@@ -87,6 +91,9 @@ class TeacherSessionService {
           throw const TeacherSessionException('Sunucuya ulaşılamıyor');
         });
 
+    if (response.statusCode == 401) {
+      SessionExpiryNotifier.instance.notify();
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw const TeacherSessionException('Geçmiş oturumlar alınamadı.');
     }
@@ -117,6 +124,9 @@ class TeacherSessionService {
           throw const TeacherSessionException('Sunucuya ulaşılamıyor');
         });
 
+    if (response.statusCode == 401) {
+      SessionExpiryNotifier.instance.notify();
+    }
     final body = _decodeBody(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw TeacherSessionException(
@@ -145,6 +155,9 @@ class TeacherSessionService {
           throw const TeacherSessionException('Sunucuya ulaşılamıyor');
         });
 
+    if (response.statusCode == 401) {
+      SessionExpiryNotifier.instance.notify();
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw const TeacherSessionException('Katılım listesi alınamadı.');
     }
@@ -179,6 +192,9 @@ class TeacherSessionService {
           throw const TeacherSessionException('Sunucuya ulaşılamıyor');
         });
 
+    if (response.statusCode == 401) {
+      SessionExpiryNotifier.instance.notify();
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final body = _decodeBody(response.body);
       throw TeacherSessionException(
@@ -206,6 +222,9 @@ class TeacherSessionService {
           throw const TeacherSessionException('Sunucuya ulaşılamıyor');
         });
 
+    if (response.statusCode == 401) {
+      SessionExpiryNotifier.instance.notify();
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw const TeacherSessionException('Oturum bitirilemedi.');
     }

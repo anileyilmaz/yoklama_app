@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../models/course_progress.dart';
 import 'api_config.dart';
 import 'auth_token_store.dart';
+import 'session_expiry_notifier.dart';
 
 class CourseProgressService {
   const CourseProgressService({
@@ -40,6 +41,10 @@ class CourseProgressService {
         .onError<http.ClientException>((error, stackTrace) {
           throw const CourseProgressException('Sunucuya ulaşılamıyor');
         });
+
+    if (response.statusCode == 401) {
+      SessionExpiryNotifier.instance.notify();
+    }
 
     final decoded = _decode(response.body);
     final body = decoded is Map<String, dynamic> ? decoded : const {};

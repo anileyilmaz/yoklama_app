@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../models/attendance_report.dart';
 import 'api_config.dart';
 import 'auth_token_store.dart';
+import 'session_expiry_notifier.dart';
 
 class AttendanceReportService {
   const AttendanceReportService({
@@ -43,6 +44,10 @@ class AttendanceReportService {
         .onError<http.ClientException>((error, stackTrace) {
           throw const AttendanceReportException('Sunucuya ulaşılamıyor');
         });
+
+    if (response.statusCode == 401) {
+      SessionExpiryNotifier.instance.notify();
+    }
 
     final body = _decodeBody(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {
