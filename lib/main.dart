@@ -191,14 +191,18 @@ class _AppGateState extends State<AppGate> {
     setState(() => _student = session.student);
   }
 
-  Future<void> _saveStaff(StaffAuthSession session) async {
+  Future<void> _saveStaff(StaffAuthSession session, bool rememberMe) async {
     final prefs = await SharedPreferences.getInstance();
     await widget.tokenStore.saveToken(session.token);
     await prefs.setString(_roleKey, 'teacher');
-    await prefs.setString(
-      _staffUserKey,
-      jsonEncode(session.staffUser.toJson()),
-    );
+    if (rememberMe) {
+      await prefs.setString(
+        _staffUserKey,
+        jsonEncode(session.staffUser.toJson()),
+      );
+    } else {
+      await prefs.remove(_staffUserKey);
+    }
     await prefs.remove(_studentKey);
     setState(() => _staffUser = session.staffUser);
   }
@@ -251,7 +255,7 @@ class _AppGateState extends State<AppGate> {
           onSaved: (result, rememberMe) => switch (result) {
             StudentLoginResult(:final session) =>
               _saveStudent(session, rememberMe),
-            StaffLoginResult(:final session) => _saveStaff(session),
+            StaffLoginResult(:final session) => _saveStaff(session, rememberMe),
           },
         );
     }

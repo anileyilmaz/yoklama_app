@@ -284,15 +284,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               remainingSeconds: _lockoutRemainingSeconds,
                             ),
                           ],
-                          if (_isStudentMode) ...[
-                            const SizedBox(height: 18),
-                            _RememberMeRow(
-                              value: _rememberMe,
-                              enabled: !_submitting && !locked,
-                              onChanged: (value) =>
-                                  setState(() => _rememberMe = value),
-                            ),
-                          ],
+                          const SizedBox(height: 18),
+                          _RememberMeRow(
+                            value: _rememberMe,
+                            enabled: !_submitting && !locked,
+                            onChanged: (value) =>
+                                setState(() => _rememberMe = value),
+                          ),
                           const SizedBox(height: 24),
                           PrimaryButton(
                             label: 'Giriş Yap',

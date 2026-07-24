@@ -36,22 +36,23 @@ void main() {
     expect(find.text('Öğrenci girişi'), findsOneWidget);
   });
 
-  testWidgets('switching domain to ege.edu.tr hides student-only fields', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(home: LoginScreen(onSaved: (_, _) async {})),
-    );
+  testWidgets(
+    'switching domain to ege.edu.tr hides student-only fields but keeps remember-me',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(home: LoginScreen(onSaved: (_, _) async {})),
+      );
 
-    await tester.tap(find.byType(DropdownButton<String>));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text(kStaffLoginDomain).last);
-    await tester.pumpAndSettle();
+      await tester.tap(find.byType(DropdownButton<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(kStaffLoginDomain).last);
+      await tester.pumpAndSettle();
 
-    expect(find.text('Beni hatırla'), findsNothing);
-    expect(find.text('Hesabın yok mu? Kayıt ol'), findsNothing);
-    expect(find.text('Hoca / Yönetici girişi'), findsOneWidget);
-  });
+      expect(find.text('Beni hatırla'), findsOneWidget);
+      expect(find.text('Hesabın yok mu? Kayıt ol'), findsNothing);
+      expect(find.text('Hoca / Yönetici girişi'), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'student domain: successful login calls onSaved with StudentLoginResult',
