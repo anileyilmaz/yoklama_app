@@ -75,7 +75,7 @@ gerekir (varsayılan olarak geliştirme makinesinin LAN IP'sine göre elle ayarl
 
 Web build üzerinden kamera (QR okuma) testi için telefon tarayıcısının HTTPS/secure
 context istemesi nedeniyle backend reposundaki sertifikalarla `node serve_https.js`
-kullanılması gerekir (detay için `CLAUDE.md`).
+kullanılması gerekir.
 
 ## Test
 
@@ -85,8 +85,3 @@ flutter test
 ```
 
 Push/PR'da GitHub Actions ile otomatik çalışır (`.github/workflows/test.yml`).
-
-## Geliştirici notları
-
-Mimari kararlar, servis kalıpları ve bilinçli tasarım tercihlerinin gerekçeleri için
-[`CLAUDE.md`](CLAUDE.md) dosyasına bakabilirsiniz.
