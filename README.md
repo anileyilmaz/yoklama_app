@@ -9,8 +9,8 @@ QR kodlu üniversite yoklama sisteminin <b>mobil istemcisi</b> (Flutter) — ö�
 </p>
 
 <p align="center">
-  <a href="https://github.com/anileyilmaz/yoklama_app/actions/workflows/test.yml">
-    <img src="https://github.com/anileyilmaz/yoklama_app/actions/workflows/test.yml/badge.svg" alt="Test durumu" />
+  <a href="https://github.com/anileyilmaz/yoklama-app/actions/workflows/test.yml">
+    <img src="https://github.com/anileyilmaz/yoklama-app/actions/workflows/test.yml/badge.svg" alt="Test durumu" />
   </a>
 </p>
 
@@ -27,7 +27,7 @@ yoklama bu kadar basit. Arka planda:
 4. Değilse istek hocaya düşer; hoca onaylar/reddeder, sonuç öğrenciye **socket.io** üzerinden
    anlık olarak ulaşır — sayfa yenilemeye gerek yoktur.
 
-Backend/hoca-admin web paneli ayrı bir repoda: **[yoklama-sistemi-v3](https://github.com/anileyilmaz/yoklama-sistemi-v3)**.
+Backend/hoca-admin web paneli ayrı bir repoda: **[yoklama-sistemi](https://github.com/anileyilmaz/yoklama-sistemi)**.
 Bu uygulama yalnızca o backend'in mobil API'sini ve socket.io sunucusunu tüketir, kendi sunucu kodu içermez.
 
 ## Özellikler
@@ -70,7 +70,7 @@ flutter run
 ```
 
 Uygulamanın backend'e bağlanabilmesi için `lib/services/api_config.dart` içindeki
-`ApiConfig.baseUrl`'in çalışan `yoklama-sistemi-v3` sunucusunun adresini göstermesi
+`ApiConfig.baseUrl`'in çalışan `yoklama-sistemi` sunucusunun adresini göstermesi
 gerekir (varsayılan olarak geliştirme makinesinin LAN IP'sine göre elle ayarlanır).
 
 Web build üzerinden kamera (QR okuma) testi için telefon tarayıcısının HTTPS/secure
