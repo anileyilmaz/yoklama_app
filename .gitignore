@@ -46,3 +46,8 @@ app.*.map.json
 
 # Local git worktrees used for isolated feature work
 /.worktrees/
+
+# Claude Code çalışma dosyaları - yerel geliştirme için tutulur, public repoda
+# görünmez (AI destekli geliştirme sürecinin iç dokümanları)
+CLAUDE.md
+docs/superpowers/
